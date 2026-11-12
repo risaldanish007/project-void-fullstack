@@ -1,0 +1,179 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Mr+De+Haviland&display=swap');
+* { box-sizing: border-box; }
+
+html {
+  min-width: 320px;
+  scroll-behavior: smooth;
+}
+
+body{
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-color: black;
+}
+
+#root { width: 100%; min-height: 100vh; overflow-x: clip; }
+img, video, canvas, svg { max-width: 100%; }
+button, input, textarea, select { max-width: 100%; }
+p, h1, h2, h3, h4, a, button, td, th { overflow-wrap: anywhere; }
+/* The 'VOID' Font - Massive and Blocky */
+h1 {
+  font-family: 'Archivo Black', sans-serif;
+  /* This creates that 'TS Block' overlapping letter feel */
+  letter-spacing: -0.08em; 
+}
+
+/* The 'energy' Font - Thin and Script */
+.font-script {
+  font-family: 'Mr De Haviland', cursive;
+  /* Tilt it slightly like your drawing */
+  transform: rotate(-5deg) translateY(15px);
+}
+.home-page-wrapper{
+  /* This points to the image you put in the public folder */
+  background-image: url('../public/images/void-bg-vin.png'); 
+  
+  /* This makes sure the image covers the entire screen */
+  background-size: 50%;
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed; /* This keeps it still while you scroll */
+  padding: 0%;
+  margin: -1rem -0.75rem 0;
+  min-height: 100vh;
+}
+.hero-section {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* This is your new layer that slides up */
+.product-description-layer {
+  position: relative; /* Sits in the normal scroll flow */
+  z-index: 10;        /* Ensures it stays on top of the background */
+  background-color: #000000; /* Solid black to cover the image */
+  color: white;
+  padding: 100px 50px;
+  min-height: 60vh;   /* Gives it some height to talk about the product */
+  
+  /* Optional: Adds a nice shadow to separate it from the image */
+  box-shadow: 0px -20px 40px rgba(0, 0, 0, 0.5);
+}
+/* --- VOID TERMINAL TOASTS --- */
+:root {
+  --toastify-color-dark: #050505;
+  --toastify-text-color-dark: #ffffff;
+}
+
+.Toastify__toast {
+  border-radius: 0 !important; /* Sharp corners */
+  background: #050505 !important;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8) !important;
+  padding: 0 !important;
+  min-height: 50px !important;
+}
+/* Custom VOID Toast Styling */
+.Toastify__toast {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+  border-radius: 12px !important;
+  font-family: monospace; /* Matches your 'Existing Operative' text */
+}
+
+/* Success icon color */
+.Toastify__toast--success {
+  border-left: 4px solid #22c55e !important;
+}
+
+/* Error icon color */
+.Toastify__toast--error {
+  border-left: 4px solid #ef4444 !important;
+}
+.product-page-wrapper{
+  /* This points to the image you put in the public folder */
+  /* background-image: url('../public/images/void-bg-vin.png');  */
+  
+  /* This makes sure the image covers the entire screen */
+  background-size: 50%;
+  background-size: cover;
+  background-position: center;
+  /* background-attachment: fixed; This keeps it still while you scroll */
+  padding: 0%;
+  margin: -1rem -0.75rem 0;
+  margin-bottom: 1rem;
+
+  min-height: 100vh;
+}
+
+@media (min-width: 640px) {
+  .home-page-wrapper,
+  .product-page-wrapper {
+    margin-left: -1.25rem;
+    margin-right: -1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-page-wrapper,
+  .product-page-wrapper {
+    margin-left: -2rem;
+    margin-right: -2rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .home-page-wrapper {
+    background-attachment: scroll;
+  }
+
+  .Toastify__toast-container {
+    width: calc(100vw - 1.5rem) !important;
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+    bottom: 0.75rem !important;
+  }
+
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .product-description-layer { padding: 3.5rem 1.25rem; }
+}
+/* index.css */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #22c55e; /* VOID Green */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #16a34a;
+}
+html, body {
+  width: 100%;
+}
+.admin-input {
+  @apply w-full bg-white/5 border border-white/10 rounded-xl px-5 py-3 font-mono text-sm text-white focus:border-green-500 outline-none transition-all placeholder:text-white/10;
+}
+
+@import "tailwindcss";

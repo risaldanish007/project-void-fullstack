@@ -1,0 +1,258 @@
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import CanViewer from '../components/layout/CanModel';
+import { COLLECTIONS } from '../utils/constants';
+import { toast } from 'react-toastify';
+import { catalogClient } from '../api/apiClient';
+import { addProductToCart } from "../store/cartSlice";
+
+const Home = () => {
+  const dispatch = useDispatch();
+  const cartItems = useSelector((state) => state.cart.items);
+
+  const { data: products, isLoading, isError } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const response = await catalogClient.get('/products/');
+      return response.data;
+    }
+  });
+////////////////HOME
+  const handleAddToCart = async (product) => {
+  const itemInCart = cartItems.find((item) => item.id === product.id);
+  const currentQty = itemInCart ? itemInCart.quantity : 0;
+  const availableStock = Number(product.stock || 0);
+
+  if (availableStock <= 0 || currentQty >= availableStock) {
+    toast.error("LIMIT_REACHED", {
+      toastId: "void-cart-signal",
+      icon: false,
+      className:
+        "bg-black border border-red-500/40 rounded-none font-mono text-[10px] text-red-500 tracking-[0.3em] px-6",
+    });
+    return;
+  }
+
+  try {
+    await dispatch(
+      addProductToCart({ productId: product.id, quantity: 1 })
+    ).unwrap();
+
+    toast.success("SIGNAL_ACQUIRED", {
+      toastId: "void-cart-signal",
+      icon: false,
+      className:
+        "bg-black border border-white/10 rounded-none font-mono text-[10px] text-white tracking-[0.3em] px-6",
+      progressClassName: "bg-green-500",
+    });
+  } catch (error) {
+    toast.error(
+      error?.stock || error?.detail || "Could not add product to cart"
+    );
+  }
+};
+
+  // --- INLINE SYSTEM LOADER ---
+  if (isLoading) return (
+    <div className="h-screen w-full bg-black flex items-center justify-center">
+      <span className="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.6em] animate-pulse">
+        Syncing Signal...
+      </span>
+    </div>
+  );
+
+  if (isError) return <div className="text-center mt-20 text-red-500 font-mono uppercase tracking-widest text-xs">Signal lost.</div>;
+
+  return (
+    <div className="home-page-wrapper bg-black">
+      
+      {/* SECTION 1: STICKY HERO */}
+      <section className="sticky top-0 h-[100svh] w-full flex flex-col items-center justify-center overflow-hidden z-0">
+        <div 
+          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat" 
+          style={{ 
+            backgroundImage: "url('/images/void-bg-vin.png')",
+            filter: "brightness(0.7)"
+          }}
+        />
+        <div className="text-center z-10 pointer-events-none mb-32">
+          <h1 className="text-[clamp(2.5rem,12vw,8rem)] font-black tracking-tighter text-white/30 uppercase italic leading-none drop-shadow-2xl">
+            Pure Signal.
+          </h1>
+        </div>
+        <div className="w-full h-full absolute inset-0 z-11"> 
+          <CanViewer />
+        </div>
+      </section>
+
+      {/* SECTION 2: THE MANIFESTO */}
+      <div className="relative z-30 bg-[#050505] shadow-[0_-20px_50px_rgba(0,0,0,1)]">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:4rem_4rem] pointer-events-none" />
+
+        <section className="relative py-20 md:py-32 border-t border-white/5 overflow-hidden">
+          <div className="max-w-7xl mx-auto px-6 relative z-10">
+            <div className="grid lg:grid-cols-12 gap-8 md:gap-12 items-end mb-16 md:mb-32">
+              <div className="lg:col-span-7">
+                <span className="text-green-500 font-mono text-[10px] tracking-[0.4em] uppercase mb-8 block">System Architecture</span>
+                <h2 className="text-4xl sm:text-5xl md:text-7xl font-black text-white uppercase italic leading-[0.9] md:leading-[0.85] tracking-tighter">
+                  Zero Sugar.<br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-cyan-500">Infinite Focus.</span>
+                </h2>
+                <div className="h-1 w-24 bg-gradient-to-r from-green-500 to-transparent mt-12"></div>
+              </div>
+              <div className="lg:col-span-5 flex flex-col justify-end border-l border-white/10 pl-5 md:pl-8">
+                <p className="text-gray-400 text-lg font-light mb-8">VOID is a cognitive performance layer engineered for high-output builders.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 border-y border-white/5">
+              {[
+                { name: "VOID ZERO", function: "Deep Work Baseline" },
+                { name: "FLOW IO", function: "Creative Immersion" },
+                { name: "FORM PEAK", function: "Physical High-Output" },
+                { name: "RITE NOX", function: "Evening Decompression" }
+              ].map((item, index) => (
+                <div key={item.name} className="p-4 sm:p-8 md:p-12 group hover:bg-white/[0.02] transition-colors border-r border-white/5 last:border-r-0">
+                  <span className="text-white/20 font-mono text-[9px] uppercase block mb-8 group-hover:text-green-500">0{index + 1} // Protocol</span>
+                  <h4 className="text-white font-black uppercase italic text-xl mb-2">{item.name}</h4>
+                  <p className="text-gray-500 text-[10px] uppercase tracking-widest">{item.function}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION 2.5: BRAND INTELLIGENCE */}
+        <section className="relative py-20 md:py-32 bg-[#0a0a0a] border-t border-white/5 overflow-hidden">
+          <div className="max-w-7xl mx-auto px-6 relative z-10">
+            <div className="grid md:grid-cols-2 gap-16 items-center">
+              <div>
+                <span className="text-cyan-500 font-mono text-[10px] tracking-[0.4em] uppercase mb-6 block">Corporate Intelligence</span>
+                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white uppercase italic tracking-tighter mb-8">
+                  Not just an energy drink.<br/>
+                  <span className="text-white/40">A performance state.</span>
+                </h2>
+                <div className="space-y-6 text-gray-400 font-light leading-relaxed">
+                  <p>
+                    VOID ENERGY was established to eradicate the standard boom-and-bust cycle of traditional caffeine consumption. We do not sell sugar water. We engineer highly calibrated liquid hardware.
+                  </p>
+                  <p>
+                    Every can is a calculated matrix of nootropics, adaptogens, and clean energy vectors designed to push your neuro-physical limits. Whether you are coding a zero-day exploit, designing a multi-layered matrix, or pushing your physical chassis to its absolute peak, we provide the fuel.
+                  </p>
+                </div>
+                <div className="mt-10 grid grid-cols-2 gap-6 border-t border-white/10 pt-10">
+                  <div>
+                    <h4 className="text-white font-black italic uppercase text-xl mb-2">0g Sugar</h4>
+                    <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Zero Glycemic Crash</p>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-black italic uppercase text-xl mb-2">Nootropic Core</h4>
+                    <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">L-Theanine + Alpha GPC</p>
+                  </div>
+                </div>
+              </div>
+              <div className="relative h-[400px] border border-white/10 rounded-3xl overflow-hidden bg-black flex items-center justify-center group shadow-2xl">
+                 <div className="absolute inset-0 bg-[url('/images/void-bg-vin.png')] bg-cover bg-center opacity-30 grayscale group-hover:grayscale-0 transition-all duration-1000 scale-105 group-hover:scale-100" />
+                 <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent" />
+                 <div className="relative z-10 text-center">
+                    <span className="text-white font-black italic text-6xl tracking-tighter">VOID</span>
+                    <p className="text-cyan-500 font-mono text-[10px] tracking-[0.5em] uppercase mt-2">Energy_Systems</p>
+                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION 3: SIGNATURE SPOTLIGHT */}
+        {products && (() => {
+          const voidZero = products.find(p => p.name.toLowerCase().includes("void zero"));
+          if (!voidZero) return null;
+
+          const stockVal = Number(voidZero.countInStock ?? voidZero.stock ?? 0);
+          const isOutOfStock = stockVal <= 0;
+
+          return (
+            <section className="relative py-20 md:py-32 bg-[#020202] border-t border-white/5 overflow-hidden">
+              <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] blur-[150px] rounded-full pointer-events-none transition-colors duration-1000 ${isOutOfStock ? 'bg-red-500/5' : 'bg-green-500/5'}`} />
+
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10 flex flex-col md:flex-row items-center gap-10 md:gap-16 lg:gap-32">
+                <div className="w-full md:w-1/2 relative group flex justify-center">
+                  <div className={`absolute inset-0 blur-3xl rounded-full scale-75 transition-all duration-700 ${isOutOfStock ? 'bg-red-500/10' : 'bg-green-500/20 group-hover:scale-90'}`} />
+                  <img
+                    src={voidZero.image}
+                    alt={voidZero.name}
+                    className={`relative z-10 w-full max-w-sm object-contain transition-all duration-700 ${isOutOfStock ? 'grayscale opacity-30 scale-95' : 'hover:-translate-y-4'}`}
+                  />
+                </div>
+
+                <div className="w-full md:w-1/2 text-left">
+                  <span className="text-green-500 border border-green-500/30 px-3 py-1 rounded-full font-mono text-[9px] tracking-[0.3em] uppercase mb-8 inline-block">Signature Variant</span>
+                  <h3 className="text-4xl sm:text-5xl md:text-7xl font-black text-white uppercase italic tracking-tighter mb-6">{voidZero.name}</h3>
+                  <div className="bg-white/[0.02] border border-white/5 p-6 rounded-2xl mb-10 max-w-lg">
+                    <p className="text-gray-400 text-sm font-light">{voidZero.description}</p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-8">
+                    <span className={`text-4xl font-black font-mono tracking-tighter ${isOutOfStock ? 'text-gray-700 line-through' : 'text-white'}`}>
+                      ${voidZero.price}
+                    </span>
+                    <button
+                      disabled={isOutOfStock}
+                      onClick={() => handleAddToCart(voidZero)}
+                      className={`px-10 py-4 rounded-full font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 
+                        ${isOutOfStock 
+                          ? 'bg-gray-900 text-gray-600 cursor-not-allowed border border-white/5 opacity-50' 
+                          : 'bg-white text-black hover:bg-green-500 hover:text-white shadow-[0_0_20px_rgba(255,255,255,0.1)]'}`}
+                    >
+                      {isOutOfStock ? 'Signal Lost' : 'Acquire Signal'}
+                    </button>
+                    <Link to={`/product/${voidZero.id}`} className="text-[10px] font-mono text-gray-500 hover:text-green-500 uppercase tracking-widest transition-colors">View Specs →</Link>
+                  </div>
+                </div>
+              </div>
+            </section>
+          );
+        })()}
+
+        {/* SECTION 4: VARIANTS */}
+        <section id="variants" className="py-20 md:py-32 bg-[#050505] border-t border-white/5">
+  <div className="max-w-7xl mx-auto px-6 text-center">
+    <div className="grid md:grid-cols-2 gap-6">
+      {COLLECTIONS.map((collection) => (
+        <Link 
+          preventScrollReset 
+          to={`/series/${collection.id}`} 
+          key={collection.id} 
+          className="group block relative min-h-[260px] md:h-[280px] rounded-3xl overflow-hidden border border-white/10 bg-[#0a0a0a]"
+        >
+          {/* Hover Gradient Effect */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent group-hover:from-cyan-500/10 transition-colors duration-500" />
+          
+          <div className="relative z-10 h-full p-6 sm:p-10 flex flex-col justify-between text-left">
+            {/* Top Section: Badge and Glimpse */}
+            <div className="space-y-4">
+              <span className="font-mono text-[9px] uppercase text-cyan-500 border border-cyan-500/20 px-3 py-1 rounded-full w-fit block">
+                {collection.subtitle}
+              </span>
+              <p className="text-white/50 text-sm leading-relaxed max-w-[80%] line-clamp-3 group-hover:text-white/70 transition-colors">
+                {collection.description}
+              </p>
+            </div>
+
+            {/* Bottom Section: Title */}
+            <h3 className="text-4xl font-black uppercase italic text-white group-hover:translate-x-2 transition-transform duration-300">
+              {collection.title}
+            </h3>
+          </div>
+        </Link>
+      ))}
+    </div>
+  </div>
+</section>
+      </div>
+    </div>
+  );
+};
+
+export default Home;
