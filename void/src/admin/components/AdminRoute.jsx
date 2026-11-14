@@ -1,15 +1,24 @@
 import { useSelector } from 'react-redux';
-import { Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import NotFound from '../../pages/NotFound';
+import VoidLoader from '../../styles/VoidLoader';
 
 const AdminRoute = () => {
-  const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const { user, isAuthenticated, isInitializing } = useSelector(
+    (state) => state.auth
+  );
+  const location = useLocation();
 
-  console.log("AUTH_STATUS:", isAuthenticated);
-  console.log("USER_ROLE:", user?.role);
+  if (isInitializing) {
+    return <VoidLoader fullScreen label="Restoring session" />;
+  }
 
-  // Security Logic: Must be logged in AND have the 'admin' role
-  if (!isAuthenticated || user?.role !== 'admin') {
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Authenticated non-admin accounts do not receive access to admin routes.
+  if (user?.role !== 'admin') {
     return <NotFound/>;
   }
 

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { catalogClient } from "../api/apiClient";
+import VoidLoader from "../styles/VoidLoader";
 
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
@@ -21,8 +22,6 @@ const SearchResults = () => {
       });
       return response.data;
     },
-    retry: (failureCount, queryError) =>
-      queryError.response?.status !== 429 && failureCount < 2,
   });
 
   return (
@@ -40,7 +39,7 @@ const SearchResults = () => {
             Enter at least 2 characters in the navbar search.
           </p>
         )}
-        {isLoading && <p className="text-white/50">Searching products…</p>}
+        {isLoading && <VoidLoader label="Searching products" />}
         {isError && (
           <p className="text-red-400">
             {error?.response?.status === 429

@@ -6,13 +6,15 @@ import { toast } from 'react-toastify';
 
 import { catalogClient } from '../api/apiClient';
 import { addProductToCart } from "../store/cartSlice";
+import VoidLoader from "../styles/VoidLoader";
+import ApiError from "../components/common/ApiError";
 
 const SeriesPage = () => {
   const { seriesId } = useParams();
   const dispatch = useDispatch();
   const currentCollection = COLLECTIONS.find(c => c.id === seriesId);
 
-  const { data: products, isLoading } = useQuery({
+  const { data: products, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
       const response = await catalogClient.get(`/products/`);
@@ -22,7 +24,10 @@ const SeriesPage = () => {
 
   const seriesProducts = products?.filter(product => product.series === seriesId) || [];
 
-  if (isLoading) return <div className="min-h-screen bg-black flex items-center justify-center font-mono text-xs text-white/20 tracking-widest uppercase">Syncing...</div>;
+  if (isLoading) return <VoidLoader fullScreen label="Loading collection" />;
+  if (isError) {
+    return <ApiError error={error} title="Collection unavailable" onRetry={refetch} />;
+  }
 
   return (
     <div className="min-h-screen bg-[#050505] text-white pt-24 pb-32 px-6">      

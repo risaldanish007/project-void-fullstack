@@ -32,8 +32,11 @@ export const restoreSession = createAsyncThunk(
     try {
       return await requestSessionRestore();
     } catch (error) {
-      clearAccessToken();
-      return rejectWithValue(error.response?.data || "No active session");
+      if (error.response?.status === 401) clearAccessToken();
+      return rejectWithValue({
+        status: error.response?.status ?? null,
+        message: error.message || "Could not restore the session",
+      });
     }
   }
 );
@@ -79,10 +82,12 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.isInitializing = false;
       })
-      .addCase(restoreSession.rejected, (state) => {
-        state.user = null;
-        state.isAuthenticated = false;
+      .addCase(restoreSession.rejected, (state, action) => {
         state.isInitializing = false;
+        if (action.payload?.status === 401) {
+          state.user = null;
+          state.isAuthenticated = false;
+        }
       });
   },
 });

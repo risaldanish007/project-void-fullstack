@@ -1,5 +1,6 @@
 import { useSelector } from "react-redux";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+import VoidLoader from "../../styles/VoidLoader";
 
 const ProtectedRoute = ({ adminOnly = false }) => {
   const { isAuthenticated, isInitializing, user } = useSelector(
@@ -8,7 +9,7 @@ const ProtectedRoute = ({ adminOnly = false }) => {
   const location = useLocation();
 
   if (isInitializing) {
-    return <div>Restoring session...</div>;
+    return <VoidLoader fullScreen label="Restoring session" />;
   }
 
   if (!isAuthenticated) {

@@ -41,7 +41,10 @@ export const fetchCurrentCart = createAsyncThunk(
             return response.data
         } catch (error) {
             return rejectWithValue(
-                error.response?.data || "Could not load"                
+                {
+                    status: error.response?.status ?? null,
+                    message: error.message || "Could not load the cart",
+                }
             )
         }
     }

@@ -25,10 +25,34 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    role = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ("id","email","first_name","last_name")
-        read_only_fields = ("id","email")
+        fields = (
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "name",
+            "is_staff",
+            "is_active",
+            "role",
+            "status",
+        )
+        read_only_fields = ("id", "email", "is_staff", "is_active", "role", "status", "name")
+
+    def get_role(self, obj):
+        return "admin" if (obj.is_staff or obj.is_superuser) else "customer"
+
+    def get_status(self, obj):
+        return "Active" if obj.is_active else "Banned"
+
+    def get_name(self, obj):
+        full_name = f"{obj.first_name} {obj.last_name}".strip()
+        return full_name if full_name else obj.email.split("@")[0]
 
 class EmailVerificationSerializer(serializers.Serializer):
     email = serializers.EmailField()

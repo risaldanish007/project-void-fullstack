@@ -2,6 +2,7 @@ import { useSelector } from "react-redux";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { ordersClient } from "../api/apiClient";
+import VoidLoader from "../styles/VoidLoader";
 
 const Profile = () => {
   const { user: authUser } = useSelector((state) => state.auth);
@@ -78,11 +79,7 @@ const Profile = () => {
         Order History
       </h2>
 
-      {isLoading && (
-        <p className="animate-pulse font-mono text-cyan-400 text-sm font-bold tracking-widest py-10 text-center uppercase">
-          Synchronizing Data...
-        </p>
-      )}
+      {isLoading && <VoidLoader label="Loading order history" />}
 
       {isError && (
         <p className="text-red-400 font-mono text-sm py-10 text-center uppercase">

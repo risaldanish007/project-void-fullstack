@@ -1,9 +1,36 @@
-
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { accountsClient } from "../api/apiClient";
+
+const EyeIcon = ({ visible }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.7"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    {visible ? (
+      <>
+        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+        <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c5 0 8.27 4.11 9 7-.29 1.18-.94 2.38-1.87 3.43" />
+        <path d="M6.61 6.61C3.91 8.1 2.38 10.36 2 12c.73 2.89 4 7 10 7a9.93 9.93 0 0 0 5.39-1.61" />
+        <path d="m2 2 20 20" />
+      </>
+    ) : (
+      <>
+        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+        <circle cx="12" cy="12" r="3" />
+      </>
+    )}
+  </svg>
+);
 
 const Register = () => {
   const [firstName, setFirstName] = useState("");
@@ -11,6 +38,9 @@ const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const navigate = useNavigate();
 
@@ -78,69 +108,122 @@ const Register = () => {
     });
   };
 
+  const inputClass =
+    "w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/40 outline-none focus:border-white/40 transition";
+
+  const passwordClass =
+    "w-full bg-white/5 border border-white/10 rounded-lg pl-4 pr-12 py-3 text-white placeholder-white/40 outline-none focus:border-white/40 transition";
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black relative overflow-hidden">
-      <div className="absolute w-[600px] h-[600px] bg-white/5 blur-3xl rounded-full -top-40 -left-40" />
+    <div
+      className="min-h-screen flex items-center justify-center relative overflow-hidden bg-black bg-cover bg-center bg-no-repeat px-4 py-8"
+      style={{
+        backgroundImage: "url('/images/login-bg.jpg')",
+      }}
+    >
+      {/* Dark overlay */}
+      <div className="absolute inset-0 bg-black/65 backdrop-blur-[2px]" />
 
-      <div className="absolute w-[500px] h-[500px] bg-white/5 blur-3xl rounded-full bottom-0 right-0" />
+      {/* Gradient effects */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black/50 via-transparent to-black/80" />
 
+      {/* Ambient glow */}
+      <div className="absolute w-[500px] h-[500px] bg-white/5 blur-3xl rounded-full -top-40 -left-40" />
+
+      <div className="absolute w-[400px] h-[400px] bg-white/5 blur-3xl rounded-full bottom-0 right-0" />
+
+      {/* Register form */}
       <form
         onSubmit={handleSubmit}
-        className="relative z-10 w-[350px] max-w-[calc(100vw-2rem)] p-6 sm:p-8 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl flex flex-col gap-4"
+        className="relative z-10 w-[350px] max-w-full p-6 sm:p-8 rounded-2xl bg-black/40 backdrop-blur-2xl border border-white/10 shadow-2xl flex flex-col gap-4"
       >
         <h2 className="text-white text-2xl font-semibold tracking-wide">
           Register
         </h2>
 
+        {/* First name */}
         <input
           type="text"
           placeholder="First name"
           value={firstName}
           onChange={(e) => setFirstName(e.target.value)}
           autoComplete="given-name"
-          className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/40 outline-none focus:border-white/30 transition"
+          className={inputClass}
           required
         />
 
+        {/* Last name */}
         <input
           type="text"
           placeholder="Last name"
           value={lastName}
           onChange={(e) => setLastName(e.target.value)}
           autoComplete="family-name"
-          className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/40 outline-none focus:border-white/30 transition"
+          className={inputClass}
         />
 
+        {/* Email */}
         <input
           type="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="email"
-          className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/40 outline-none focus:border-white/30 transition"
+          className={inputClass}
           required
         />
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="new-password"
-          className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/40 outline-none focus:border-white/30 transition"
-          required
-        />
+        {/* Password */}
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+            className={passwordClass}
+            required
+          />
 
-        <input
-          type="password"
-          placeholder="Confirm password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          autoComplete="new-password"
-          className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/40 outline-none focus:border-white/30 transition"
-          required
-        />
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors focus:outline-none"
+          >
+            <EyeIcon visible={showPassword} />
+          </button>
+        </div>
 
+        {/* Confirm password */}
+        <div className="relative">
+          <input
+            type={showConfirmPassword ? "text" : "password"}
+            placeholder="Confirm password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            autoComplete="new-password"
+            className={passwordClass}
+            required
+          />
+
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword((prev) => !prev)}
+            aria-label={
+              showConfirmPassword
+                ? "Hide confirm password"
+                : "Show confirm password"
+            }
+            aria-pressed={showConfirmPassword}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors focus:outline-none"
+          >
+            <EyeIcon visible={showConfirmPassword} />
+          </button>
+        </div>
+
+        {/* Submit */}
         <button
           type="submit"
           disabled={mutation.isPending}
@@ -149,9 +232,11 @@ const Register = () => {
           {mutation.isPending ? "Creating account..." : "Register"}
         </button>
 
+        {/* Login link */}
         <div className="mt-4 text-center">
           <p className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-mono">
             Already registered?{" "}
+
             <Link
               to="/login"
               className="text-white hover:text-green-500 transition-colors underline underline-offset-4 decoration-white/10 hover:decoration-green-500/50"

@@ -6,12 +6,14 @@ import { COLLECTIONS } from '../utils/constants';
 import { toast } from 'react-toastify';
 import { catalogClient } from '../api/apiClient';
 import { addProductToCart } from "../store/cartSlice";
+import VoidLoader from "../styles/VoidLoader";
+import ApiError from "../components/common/ApiError";
 
 const Home = () => {
   const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.cart.items);
 
-  const { data: products, isLoading, isError } = useQuery({
+  const { data: products, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
       const response = await catalogClient.get('/products/');
@@ -53,16 +55,11 @@ const Home = () => {
   }
 };
 
-  // --- INLINE SYSTEM LOADER ---
-  if (isLoading) return (
-    <div className="h-screen w-full bg-black flex items-center justify-center">
-      <span className="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.6em] animate-pulse">
-        Syncing Signal...
-      </span>
-    </div>
-  );
+  if (isLoading) return <VoidLoader fullScreen label="Syncing signal" />;
 
-  if (isError) return <div className="text-center mt-20 text-red-500 font-mono uppercase tracking-widest text-xs">Signal lost.</div>;
+  if (isError) {
+    return <ApiError error={error} title="Signal lost" onRetry={refetch} />;
+  }
 
   return (
     <div className="home-page-wrapper bg-black">

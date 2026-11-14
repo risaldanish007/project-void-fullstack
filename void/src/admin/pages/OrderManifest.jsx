@@ -1,42 +1,91 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import apiClient from "../../api/apiClient";
+import { ordersClient } from "../../api/apiClient";
 import { toast } from 'react-toastify';
+import VoidLoader from "../../styles/VoidLoader";
+import ApiError from "../../components/common/ApiError";
+
+// Map DRF order status values to the UI's display labels and select values.
+// DRF Status choices: pending_payment, placed, processing, shipped, delivered, cancelled
+const STATUS_DISPLAY = {
+  pending_payment: "Pending",
+  placed: "Pending",
+  processing: "Pending",
+  shipped: "Deployed",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+};
+
+// What the select dropdown sends → Django accepts any of these via AdminOrderStatusSerializer
+const UI_STATUSES = ["Pending", "Deployed", "Delivered", "Cancelled"];
+
+const getStatusColor = (uiStatus) => {
+  const s = uiStatus?.toLowerCase();
+  if (s === 'delivered') return 'text-green-500 border-green-500/20 bg-green-500/5';
+  if (s === 'deployed') return 'text-cyan-400 border-cyan-400/20 bg-cyan-400/5';
+  if (s === 'cancelled') return 'text-red-500 border-red-500/20 bg-red-500/5';
+  return 'text-yellow-500 border-yellow-500/20 bg-yellow-500/5';
+};
+
+// Normalise a DRF order object to the shape the UI expects.
+const normaliseOrder = (o) => ({
+  ...o,
+  // Use public_id (UUID) as the display/key identifier
+  id: o.public_id,
+  customerName: o.customer_name,
+  customerEmail: o.customer_email,
+  // Map to UI status label
+  uiStatus: STATUS_DISPLAY[o.status] || "Pending",
+  // Single total field for display (INR)
+  total: o.total_inr,
+  date: o.created_at,
+  shippingAddress: {
+    address: o.shipping_address,
+    city: o.shipping_city,
+    state: o.shipping_state,
+    zip: o.shipping_postal_code,
+    phone: o.shipping_phone,
+  },
+  items: (o.items || []).map(item => ({
+    id: item.id,
+    name: item.product_name,
+    quantity: item.quantity,
+    price: item.unit_price_inr,
+  })),
+});
 
 const OrderManifest = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All"); 
-  const [timeFilter, setTimeFilter] = useState("All Time"); 
-  const [selectedOrder, setSelectedOrder] = useState(null); 
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [timeFilter, setTimeFilter] = useState("All Time");
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const queryClient = useQueryClient();
 
-  // --- DATA ACQUISITION ---
-  const { data: orders, isLoading } = useQuery({
+  // ── Fetch ──────────────────────────────────────────────────────────────────
+  const { data: orders, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["adminOrders"],
     queryFn: async () => {
-      const response = await apiClient.get("/orders");
-      // FIX: Pre-reverse the payload to handle same-day collisions, then sort descending
-      return response.data.reverse().sort((a, b) => new Date(b.date) - new Date(a.date));
+      const response = await ordersClient.get("/admin/");
+      return response.data.map(normaliseOrder);
     },
   });
 
-  // --- FILTERING LOGIC (Standardized Casing) ---
+  // ── Filtering ──────────────────────────────────────────────────────────────
   const filteredOrders = orders?.filter(order => {
-    const matchesSearch = 
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customerEmail.toLowerCase().includes(searchTerm.toLowerCase());
+    const term = searchTerm.toLowerCase();
+    const matchesSearch =
+      order.id?.toString().toLowerCase().includes(term) ||
+      order.customerName?.toLowerCase().includes(term) ||
+      order.customerEmail?.toLowerCase().includes(term);
 
-    // Standardizing comparison to handle both 'Pending' and 'pending'
-    const currentStatus = order.status?.charAt(0).toUpperCase() + order.status?.slice(1).toLowerCase();
-    const matchesStatus = statusFilter === "All" || currentStatus === statusFilter;
+    const matchesStatus = statusFilter === "All" || order.uiStatus === statusFilter;
 
     const orderDate = new Date(order.date);
     const today = new Date();
     const isToday = orderDate.toDateString() === today.toDateString();
     const isThisWeek = (today - orderDate) / (1000 * 60 * 60 * 24) <= 7;
 
-    const matchesTime = 
+    const matchesTime =
       timeFilter === "All Time" ? true :
       timeFilter === "Today" ? isToday :
       timeFilter === "This Week" ? isThisWeek : true;
@@ -44,30 +93,29 @@ const OrderManifest = () => {
     return matchesSearch && matchesStatus && matchesTime;
   });
 
-  // --- STATUS MUTATION ---
+  // ── Status mutation ────────────────────────────────────────────────────────
   const statusMutation = useMutation({
     mutationFn: async ({ orderId, newStatus }) => {
-      return apiClient.patch(`/orders/${orderId}`, { status: newStatus });
+      return ordersClient.patch(`/admin/${orderId}/`, { status: newStatus });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(["adminOrders"]);
+      queryClient.invalidateQueries({ queryKey: ["adminOrders"] });
       toast.info("Transaction status successfully updated.");
-    }
+    },
+    onError: (err) => {
+      const detail = err.response?.data?.detail || "Status update failed.";
+      toast.error(`ERROR: ${detail}`);
+    },
   });
 
-  const getStatusColor = (status) => {
-    const s = status?.toLowerCase();
-    if (s === 'delivered') return 'text-green-500 border-green-500/20 bg-green-500/5';
-    if (s === 'deployed') return 'text-cyan-400 border-cyan-400/20 bg-cyan-400/5';
-    if (s === 'cancelled') return 'text-red-500 border-red-500/20 bg-red-500/5';
-    return 'text-yellow-500 border-yellow-500/20 bg-yellow-500/5'; // Defaults to Pending
-  };
-
-  if (isLoading) return <div className="text-white font-sans animate-pulse p-10 text-xs text-center uppercase tracking-[0.3em] font-bold">Synchronizing Transactional Records...</div>;
+  if (isLoading) return <VoidLoader label="Loading orders" />;
+  if (isError) {
+    return <ApiError error={error} title="Orders unavailable" onRetry={refetch} />;
+  }
 
   return (
     <div className="animate-in fade-in duration-700 relative pb-20 font-sans">
-      
+
       {/* --- ORDER DETAIL MANIFEST --- */}
       {selectedOrder && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/95 backdrop-blur-xl p-6">
@@ -75,7 +123,7 @@ const OrderManifest = () => {
             <div className="flex justify-between items-start mb-10 border-b border-white/5 pb-6">
               <div>
                 <span className="text-cyan-400 font-bold text-[10px] tracking-[0.3em] uppercase block mb-1">Detailed Order Manifest</span>
-                <h2 className="text-3xl font-bold italic tracking-tighter text-white uppercase">Invoice #{selectedOrder.id}</h2>
+                <h2 className="text-3xl font-bold italic tracking-tighter text-white uppercase">Invoice #{String(selectedOrder.id).slice(-8)}</h2>
               </div>
               <button onClick={() => setSelectedOrder(null)} className="text-white/40 hover:text-white transition-all text-[10px] font-bold uppercase tracking-widest border border-white/10 px-4 py-2 rounded-lg">Close Manifest</button>
             </div>
@@ -99,21 +147,18 @@ const OrderManifest = () => {
               <div className="space-y-6">
                 <h4 className="text-[10px] text-white/40 uppercase tracking-[0.2em] font-bold border-b border-white/5 pb-2">Inventory Payload</h4>
                 <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2">
-                  {selectedOrder.items.map((item) => (
-                    <div key={item.id} className="flex items-center gap-4 bg-white/[0.03] p-3 rounded-xl border border-white/5">
-                      <div className="w-10 h-10 bg-black rounded-lg p-1 border border-white/5">
-                        <img src={item.image} alt="" className="w-full h-full object-contain grayscale" />
-                      </div>
+                  {selectedOrder.items.map((item, idx) => (
+                    <div key={item.id ?? idx} className="flex items-center gap-4 bg-white/[0.03] p-3 rounded-xl border border-white/5">
                       <div className="flex-1">
                         <p className="text-white text-[10px] font-bold uppercase tracking-widest">{item.name}</p>
-                        <p className="text-white/30 text-[9px] font-bold uppercase">Quantity: {item.quantity} // Rate: ${item.price}</p>
+                        <p className="text-white/30 text-[9px] font-bold uppercase">Quantity: {item.quantity} // Rate: ₹{item.price}</p>
                       </div>
                     </div>
                   ))}
                 </div>
                 <div className="pt-6 border-t border-white/5 flex justify-between items-end">
-                    <span className="text-white/30 text-[10px] uppercase tracking-[0.2em] font-bold">Total Liability</span>
-                    <span className="text-3xl font-bold italic text-white tracking-tighter">${selectedOrder.total}</span>
+                  <span className="text-white/30 text-[10px] uppercase tracking-[0.2em] font-bold">Total Liability</span>
+                  <span className="text-3xl font-bold italic text-white tracking-tighter">₹{selectedOrder.total}</span>
                 </div>
               </div>
             </div>
@@ -130,7 +175,7 @@ const OrderManifest = () => {
               Found {filteredOrders?.length} Total Records.
             </p>
           </div>
-          <input 
+          <input
             type="text"
             placeholder="Search by ID or Customer Name..."
             value={searchTerm}
@@ -139,33 +184,32 @@ const OrderManifest = () => {
           />
         </div>
 
-        {/* Filter Bar */}
         <div className="flex flex-wrap gap-4 border-t border-white/5 pt-8">
-            <div className="flex gap-2">
-                {["All", "Pending", "Deployed", "Delivered", "Cancelled"].map((status) => (
-                    <button
-                        key={status}
-                        onClick={() => setStatusFilter(status)}
-                        className={`px-5 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border 
-                            ${statusFilter === status ? 'bg-white border-white text-black shadow-lg' : 'bg-white/5 border-white/10 text-white/50 hover:text-white'}`}
-                    >
-                        {status}
-                    </button>
-                ))}
-            </div>
-            <div className="w-[1px] h-8 bg-white/10 hidden md:block" />
-            <div className="flex gap-2">
-                {["All Time", "Today", "This Week"].map((time) => (
-                    <button
-                        key={time}
-                        onClick={() => setTimeFilter(time)}
-                        className={`px-5 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border 
-                            ${timeFilter === time ? 'bg-white border-white text-black' : 'bg-white/5 border-white/10 text-white/40 hover:text-white'}`}
-                    >
-                        {time}
-                    </button>
-                ))}
-            </div>
+          <div className="flex gap-2">
+            {["All", ...UI_STATUSES].map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`px-5 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border 
+                  ${statusFilter === s ? 'bg-white border-white text-black shadow-lg' : 'bg-white/5 border-white/10 text-white/50 hover:text-white'}`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+          <div className="w-[1px] h-8 bg-white/10 hidden md:block" />
+          <div className="flex gap-2">
+            {["All Time", "Today", "This Week"].map((time) => (
+              <button
+                key={time}
+                onClick={() => setTimeFilter(time)}
+                className={`px-5 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border 
+                  ${timeFilter === time ? 'bg-white border-white text-black' : 'bg-white/5 border-white/10 text-white/40 hover:text-white'}`}
+              >
+                {time}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
@@ -184,37 +228,37 @@ const OrderManifest = () => {
           <tbody className="text-xs uppercase">
             {filteredOrders?.map((order) => (
               <tr key={order.id} className="border-b border-white/[0.05] hover:bg-white/[0.03] transition-all group">
-                <td className="p-7 text-white font-bold italic tracking-tighter text-base">#{order.id}</td>
+                <td className="p-7 text-white font-bold italic tracking-tighter text-base">
+                  #{String(order.id).slice(-8)}
+                </td>
                 <td className="p-7">
                   <div className="flex flex-col">
                     <span className="text-white font-bold tracking-tight">{order.customerName}</span>
                     <span className="text-[10px] text-white/40 font-medium lowercase mt-1">{order.customerEmail}</span>
                   </div>
                 </td>
-                <td className="p-7 text-white font-bold italic text-sm">${order.total}</td>
+                <td className="p-7 text-white font-bold italic text-sm">₹{order.total}</td>
                 <td className="p-7">
-                  <span className={`px-4 py-1.5 rounded-lg text-[9px] font-bold tracking-widest border transition-colors ${getStatusColor(order.status)}`}>
-                    {order.status || 'Pending'}
+                  <span className={`px-4 py-1.5 rounded-lg text-[9px] font-bold tracking-widest border transition-colors ${getStatusColor(order.uiStatus)}`}>
+                    {order.uiStatus}
                   </span>
                 </td>
                 <td className="p-7 text-right">
                   <div className="flex justify-end gap-3">
-                    <button 
+                    <button
                       onClick={() => setSelectedOrder(order)}
                       className="text-[10px] font-bold uppercase tracking-widest border border-white/10 px-5 py-3 rounded-xl text-white/60 hover:bg-white hover:text-black transition-all"
                     >
                       Manifest
                     </button>
-                    <select 
-                      value={order.status || 'Pending'}
+                    <select
+                      value={order.uiStatus}
                       onChange={(e) => statusMutation.mutate({ orderId: order.id, newStatus: e.target.value })}
                       className="bg-[#111] border border-white/10 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl px-4 py-3 outline-none focus:border-white/30 cursor-pointer hover:bg-white/5 transition-all"
                     >
-                      {/* FIX: Forced Dark Background on Options */}
-                      <option value="Pending" className="bg-[#0a0a0a] text-white">Pending</option>
-                      <option value="Deployed" className="bg-[#0a0a0a] text-white">Deployed</option>
-                      <option value="Delivered" className="bg-[#0a0a0a] text-white">Delivered</option>
-                      <option value="Cancelled" className="bg-[#0a0a0a] text-white">Cancelled</option>
+                      {UI_STATUSES.map(s => (
+                        <option key={s} value={s} className="bg-[#0a0a0a] text-white">{s}</option>
+                      ))}
                     </select>
                   </div>
                 </td>

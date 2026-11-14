@@ -1,6 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ordersClient } from "../api/apiClient";
+import VoidLoader from "../styles/VoidLoader";
+import ApiError from "../components/common/ApiError";
 
 const OrderDetail = () => {
   const { id } = useParams();
@@ -10,6 +12,8 @@ const OrderDetail = () => {
     data: order,
     isLoading,
     isError,
+    error,
+    refetch,
   } = useQuery({
     queryKey: ["orderDetail", id],
     queryFn: async () => {
@@ -51,26 +55,19 @@ const OrderDetail = () => {
       currency: "INR",
     }).format(Number(amount));
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-cyan-500 font-mono text-xs uppercase tracking-[0.5em] animate-pulse font-black">
-        Retrieving_Data...
-      </div>
-    );
-  }
+  if (isLoading) return <VoidLoader fullScreen label="Loading order" />;
 
   if (isError || !order) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-black text-red-500 p-10 text-center">
-        <h2 className="text-2xl font-black italic mb-4 uppercase tracking-tighter">
-          Order_Not_Found
-        </h2>
-        <p className="font-mono text-xs text-white/40 uppercase tracking-widest">
-          This order may not exist or may not belong to your account.
-        </p>
+      <div className="flex min-h-[60vh] flex-col items-center justify-center">
+        <ApiError
+          error={error}
+          title="Order unavailable"
+          onRetry={refetch}
+        />
         <button
           onClick={() => navigate("/profile")}
-          className="mt-8 border border-red-500/30 px-6 py-2 text-[10px] font-black uppercase text-red-500 hover:bg-red-500 hover:text-white transition-all"
+          className="mt-4 border border-red-500/30 px-6 py-2 text-[10px] font-black uppercase text-red-500 transition-all hover:bg-red-500 hover:text-white"
         >
           Return to Profile
         </button>

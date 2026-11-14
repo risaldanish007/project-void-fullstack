@@ -44,8 +44,6 @@ const Navbar = () => {
       });
       return response.data.slice(0, 5);
     },
-    retry: (failureCount, error) =>
-      error.response?.status !== 429 && failureCount < 2,
   });
 
   const handleSearchSubmit = (event) => {

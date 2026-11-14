@@ -1,14 +1,6 @@
-from django.urls import path
-from .views import (
-    CheckoutView,
-    MyOrderListView,
-    OrderDetailView,
-    VerifyPaymentView,
-)
+from django.urls import include, path
 
 urlpatterns = [
-    path("checkout/", CheckoutView.as_view(), name="checkout"),
-    path("verify-payment/", VerifyPaymentView.as_view(), name="verify-payment"),
-    path("", MyOrderListView.as_view(), name="my-orders"),
-    path("<uuid:public_id>/", OrderDetailView.as_view(), name="order-detail"),
+    path("", include("apps.orders.api.customer.urls")),
+    path("admin/", include("apps.orders.api.admin.urls")),
 ]

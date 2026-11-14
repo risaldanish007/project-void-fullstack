@@ -8,7 +8,17 @@ import './index.css';
 import { BrowserRouter as Router } from 'react-router-dom';
 
 // Create a client for TanStack Query
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) => {
+        const status = error?.response?.status;
+        return (!status || status >= 500) && failureCount < 1;
+      },
+      retryDelay: 750,
+    },
+  },
+});
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

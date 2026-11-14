@@ -6,11 +6,13 @@ import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
 import { catalogClient } from '../api/apiClient';
 import { addProductToCart } from "../store/cartSlice";
+import VoidLoader from "../styles/VoidLoader";
+import ApiError from "../components/common/ApiError";
 
 const Variants = () => {
   const dispatch = useDispatch();
   
-  const { data: products, isLoading } = useQuery({
+  const { data: products, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
       const response = await catalogClient.get('/products')
@@ -49,11 +51,10 @@ const handleAddToCart = async (e, product) => {
   }
 };
 
-  if (isLoading) return (
-    <div className="min-h-screen flex items-center justify-center bg-black font-mono text-[10px] text-white/60 tracking-[0.5em] animate-pulse font-black uppercase">
-      Synchronizing_Product_Matrix...
-    </div>
-  );
+  if (isLoading) return <VoidLoader fullScreen label="Loading products" />;
+  if (isError) {
+    return <ApiError error={error} title="Products unavailable" onRetry={refetch} />;
+  }
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6">

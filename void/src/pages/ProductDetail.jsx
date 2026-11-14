@@ -4,12 +4,14 @@ import { useDispatch } from "react-redux";
 import { addProductToCart} from "../store/cartSlice";
 import { toast } from "react-toastify";
 import { catalogClient } from "../api/apiClient";
+import VoidLoader from "../styles/VoidLoader";
+import ApiError from "../components/common/ApiError";
 
 const ProductDetail = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
 
-  const { data: product, isLoading, isError } = useQuery({
+  const { data: product, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["product", id],
     queryFn: async () => {
       const response = await catalogClient.get(`/products/${id}`);
@@ -17,17 +19,17 @@ const ProductDetail = () => {
     },
   });
 
-  if (isLoading) return (
-    <div className="min-h-screen bg-black flex items-center justify-center text-white font-black tracking-widest uppercase animate-pulse">
-      Synchronizing Void...
-    </div>
-  );
+  if (isLoading) return <VoidLoader fullScreen label="Loading product" />;
   
-  if (isError || !product) return (
-    <div className="min-h-screen bg-black flex items-center justify-center text-red-500 font-black uppercase">
-      Product Not Found.
-    </div>
-  );
+  if (isError || !product) {
+    return (
+      <ApiError
+        error={error}
+        title="Product unavailable"
+        onRetry={refetch}
+      />
+    );
+  }
 
   // --- INVENTORY LOGIC ---
   const stockCount = Number(product.stock || 0);

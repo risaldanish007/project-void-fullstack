@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VOID E-Commerce — Admin Panel DRF Migration & Integration Documentation</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 16mm 18mm 16mm;
+    @bottom-right {
+      content: counter(page);
+    }
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #1a1a1a;
+    line-height: 1.5;
+    font-size: 10.5pt;
+    margin: 0;
+    padding: 0;
+  }
+  h1, h2, h3, h4 {
+    color: #0b0f19;
+    font-weight: 700;
+  }
+  h1 {
+    font-size: 20pt;
+    border-bottom: 2px solid #000;
+    padding-bottom: 6px;
+    margin-top: 0;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: -0.5px;
+  }
+  .subtitle {
+    font-size: 11pt;
+    color: #4b5563;
+    font-weight: 600;
+    margin-bottom: 18px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 8pt;
+    font-weight: 700;
+    border-radius: 4px;
+    text-transform: uppercase;
+    background: #e5e7eb;
+    color: #1f2937;
+  }
+  .badge-success { background: #dcfce7; color: #15803d; }
+  .badge-info { background: #e0f2fe; color: #0369a1; }
+  .badge-warn { background: #fef3c7; color: #b45309; }
+
+  h2 {
+    font-size: 13.5pt;
+    margin-top: 18px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 4px;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 11pt;
+    margin-top: 12px;
+    margin-bottom: 6px;
+    page-break-after: avoid;
+  }
+  p {
+    margin-top: 0;
+    margin-bottom: 8px;
+  }
+  ul, ol {
+    margin-top: 0;
+    margin-bottom: 8px;
+    padding-left: 20px;
+  }
+  li {
+    margin-bottom: 3px;
+  }
+  code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    font-size: 9pt;
+    background-color: #f3f4f6;
+    padding: 1px 4px;
+    border-radius: 3px;
+    border: 1px solid #e5e7eb;
+  }
+  pre {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    font-size: 8.5pt;
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 10px 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 8px 0;
+    line-height: 1.4;
+    page-break-inside: avoid;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 9pt;
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid #d1d5db;
+    padding: 6px 8px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background-color: #f9fafb;
+    font-weight: 700;
+    color: #111827;
+  }
+  tr:nth-child(even) td {
+    background-color: #fafafa;
+  }
+  .page-break {
+    page-break-before: always;
+  }
+  .callout {
+    background-color: #f0fdf4;
+    border-left: 4px solid #16a34a;
+    padding: 8px 12px;
+    margin: 10px 0;
+    font-size: 9.5pt;
+    border-radius: 0 4px 4px 0;
+  }
+  .callout-title {
+    font-weight: bold;
+    color: #15803d;
+    margin-bottom: 2px;
+  }
+  .meta-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 9pt;
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: 4px;
+  }
+</style>
+</head>
+<body>
+
+<h1>VOID E-Commerce — Admin Panel DRF Migration & Integration</h1>
+<div class="subtitle">Complete Technical Architecture, File Inventory, Flow Analysis, and Function Reference</div>
+
+<div class="meta-box">
+  <div class="meta-grid">
+    <div><strong>Project:</strong> VOID E-Commerce (Full-Stack)</div>
+    <div><strong>Migration:</strong> JSON-Server (<code>db.json</code>) &rarr; Django REST Framework (DRF)</div>
+    <div><strong>Stack (Frontend):</strong> React 19, Vite, TanStack React Query, Redux Toolkit, Tailwind CSS, Recharts</div>
+    <div><strong>Stack (Backend):</strong> Django 6.1, Django REST Framework, SimpleJWT (HttpOnly cookies), PostgreSQL/SQLite</div>
+    <div><strong>Test Suite:</strong> 44/44 Integration Tests Passed</div>
+    <div><strong>Frontend Build:</strong> Vite Build 1775 Modules Transformed (0 Errors)</div>
+  </div>
+</div>
+
+<h2>1. Executive Summary & Migration Scope</h2>
+<p>
+The VOID Admin Panel originally relied on a lightweight mock server (<code>json-server</code> at <code>http://localhost:5000</code> reading from <code>db.json</code>). This architecture posed critical security vulnerabilities, lacked transactional consistency, offered zero role enforcement, and failed when deploying to production.
+</p>
+<p>
+The objective of this migration was to transition all four admin panel views (<strong>Inventory Manager</strong>, <strong>Order Manifest</strong>, <strong>User Directory</strong>, and <strong>Admin Dashboard</strong>) to the Django REST Framework backend while strictly preserving the visual identity, dark monospace aesthetics, and responsiveness of VOIDCORP.
+</p>
+
+<h2>2. Inventory of New Files & Modified Files</h2>
+
+<h3>2.1 New Backend Files</h3>
+<table>
+  <thead>
+    <tr>
+      <th style="width: 32%;">File Path</th>
+      <th style="width: 25%;">Primary Component / Class</th>
+      <th>Responsibilities & Architectural Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>apps/accounts/permissions.py</code></td>
+      <td><code>IsAdminUserOrStaff</code></td>
+      <td>Server-side permission class enforcing that the requesting user is authenticated and has either <code>is_staff=True</code> or <code>is_superuser=True</code>. Blocks anonymous and regular customer requests with HTTP 401/403.</td>
+    </tr>
+    <tr>
+      <td><code>apps/orders/admin_views.py</code></td>
+      <td><code>AdminOrderListView</code><br><code>AdminOrderDetailView</code><br><code>AdminOrderStatusSerializer</code></td>
+      <td>Provides endpoints for administrators to retrieve all customer orders, inspect detailed shipping and line items, and transition fulfillment status with bidirectional normalization between UI labels and Django model status choices.</td>
+    </tr>
+    <tr>
+      <td><code>apps/accounts/admin_views.py</code></td>
+      <td><code>AdminUserListView</code><br><code>AdminUserDetailView</code><br><code>AdminUserReadSerializer</code><br><code>AdminUserPatchSerializer</code></td>
+      <td>Administrative user directory service providing user listing with pre-calculated dispatch/order counts, inspection of customer accounts, account suspension/reactivation (<code>is_active</code>), and clearance promotion (<code>is_staff</code>) with built-in self-modification prevention.</td>
+    </tr>
+    <tr>
+      <td><code>apps/orders/dashboard_views.py</code></td>
+      <td><code>AdminDashboardView</code></td>
+      <td>Unified administrative dashboard telemetry endpoint computing aggregated user totals, inventory thresholds (low-stock/empty), order volumes, paid revenue in INR, 30-day timeline revenue charts via portable <code>TruncDate</code>, and top-selling products.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>2.2 Modified Backend Files</h3>
+<table>
+  <thead>
+    <tr>
+      <th style="width: 32%;">File Path</th>
+      <th>Modifications & Integration Details</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>apps/accounts/serializers.py</code></td>
+      <td>Updated <code>UserProfileSerializer</code> to inject computed fields <code>role</code> (<code>"admin"</code> vs <code>"customer"</code>), <code>status</code> (<code>"Active"</code> vs <code>"Banned"</code>), and <code>name</code> (first + last name or email prefix). Resolves frontend <code>AdminRoute</code> clearance checks without exposing sensitive database fields.</td>
+    </tr>
+    <tr>
+      <td><code>apps/catalog/serializer.py</code></td>
+      <td>Added <code>Base64ImageField</code> (supports data-URI base64 decoding), <code>AdminProductWriteSerializer</code> (atomic product creation/update with automated category creation, series normalization, and nested ingredient syncing).</td>
+    </tr>
+    <tr>
+      <td><code>apps/catalog/views.py</code></td>
+      <td>Replaced with dual-purpose <code>ProductAPI</code> and <code>ProductDetailsAPI</code> enforcing <code>IsAdminUserOrStaff</code> on write operations (POST, PUT, PATCH, DELETE) while retaining public read access. Added safety check blocking decommission of products linked to existing orders.</td>
+    </tr>
+    <tr>
+      <td><code>apps/orders/urls.py</code></td>
+      <td>Registered admin routes: <code>admin/</code> (order list), <code>admin/&lt;uuid:public_id&gt;/</code> (detail & status patch), and <code>admin/dashboard/</code> (dashboard stats).</td>
+    </tr>
+    <tr>
+      <td><code>apps/accounts/urls.py</code></td>
+      <td>Registered admin routes: <code>admin/users/</code> (user listing) and <code>admin/users/&lt;int:pk&gt;/</code> (user detail & status/staff patch).</td>
+    </tr>
+    <tr>
+      <td><code>config/settings.py</code></td>
+      <td>Configured dynamic test database engine (in-memory SQLite for automated test runner execution, preserving PostgreSQL for live server runtime).</td>
+    </tr>
+    <tr>
+      <td><code>apps/accounts/tests.py</code></td>
+      <td>Created comprehensive 44-test automated integration test suite verifying permissions, catalog CRUD, order administration, user controls, dashboard telemetry, and customer isolation regression.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<h3>2.3 Modified Frontend Files</h3>
+<table>
+  <thead>
+    <tr>
+      <th style="width: 32%;">File Path</th>
+      <th>Modifications & Integration Details</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>src/api/apiClient.js</code></td>
+      <td>Removed legacy JSON-Server client (<code>http://localhost:5000</code>). Configured domain-specific Axios clients (<code>catalogClient</code>, <code>ordersClient</code>, <code>accountsClient</code>, <code>cartClient</code>). Attached JWT in-memory access token and CSRF token interceptors with automatic 401 refresh collapsing.</td>
+    </tr>
+    <tr>
+      <td><code>src/admin/pages/InventoryManager.jsx</code></td>
+      <td>Replaced JSON-Server calls with <code>catalogClient</code>. Normalized product media paths, mapped category structures, wired modal creation/updates to DRF <code>AdminProductWriteSerializer</code>, and mapped decommission actions with backend constraint feedback.</td>
+    </tr>
+    <tr>
+      <td><code>src/admin/pages/OrderManifest.jsx</code></td>
+      <td>Replaced legacy calls with <code>ordersClient</code> targeting <code>/api/v1/orders/admin/</code>. Added translation mapping between frontend labels (<code>Pending</code>, <code>Deployed</code>, <code>Delivered</code>, <code>Cancelled</code>) and backend model states. Handled UUID order identification and line-item formatting.</td>
+    </tr>
+    <tr>
+      <td><code>src/admin/pages/UserDirectory.jsx</code></td>
+      <td>Replaced JSON-Server calls with <code>accountsClient</code> and <code>ordersClient</code>. Uses backend-provided <code>order_count</code> and user profiles. Integrated modal inspection with lifetime spend calculations and wired ban/restore mutations to <code>is_active</code> toggles.</td>
+    </tr>
+    <tr>
+      <td><code>src/admin/pages/AdminDashboard.jsx</code></td>
+      <td>Refactored from multi-endpoint client-side calculation to a single high-performance query against <code>/api/v1/orders/admin/dashboard/</code>. Renders transaction performance area chart, payment bar chart, top seller variants, and financial metrics in INR.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>3. End-to-End System Architecture & Workflows</h2>
+
+<h3>3.1 Authentication & Administrative Authorization Flow</h3>
+<p>
+The application utilizes a defense-in-depth security model:
+</p>
+<ol>
+  <li><strong>Session Restoration (Client):</strong> On app boot, <code>restoreSession()</code> in Redux calls <code>/api/v1/accounts/token/refresh/</code> using the HttpOnly cookie. The backend issues a short-lived access token kept strictly in JavaScript memory.</li>
+  <li><strong>Identity & Role Serialization:</strong> The frontend calls <code>/api/v1/accounts/profile/</code>. <code>UserProfileSerializer</code> inspects <code>is_staff</code> / <code>is_superuser</code> and returns <code>"role": "admin"</code>.</li>
+  <li><strong>Route Protection (Client-side):</strong> <code>AdminRoute.jsx</code> inspects the Redux user state. If <code>user.role !== "admin"</code> or the session is unauthenticated, the user is redirected away.</li>
+  <li><strong>Server-Side Enforcement (DRF):</strong> Frontend route protection is non-authoritative. Every admin endpoint checks <code>permission_classes = [IsAdminUserOrStaff]</code>. Requests without valid JWT claims or without staff/superuser flags are rejected with HTTP 401 or HTTP 403.</li>
+</ol>
+
+<pre>
+[ React Client ]
+   |
+   |-- 1. HTTP GET /api/v1/orders/admin/ (Authorization: Bearer &lt;JWT&gt;)
+   v
+[ Django Middleware (Authentication & JWT Verification) ]
+   |
+   |-- 2. Authenticates request.user
+   v
+[ IsAdminUserOrStaff.has_permission(request, view) ]
+   |
+   |-- user.is_authenticated AND (user.is_staff OR user.is_superuser) ?
+   |      |-- YES: Execute Admin View QuerySet & Return JSON
+   |      \-- NO:  Return HTTP 403 FORBIDDEN
+</pre>
+
+<h3>3.2 Centralized Interceptor Flow (<code>apiClient.js</code>)</h3>
+<p>
+All outbound requests through <code>catalogClient</code>, <code>ordersClient</code>, and <code>accountsClient</code> pass through a unified Axios interceptor chain:
+</p>
+<ul>
+  <li><strong>Request Interceptor:</strong> Automatically injects <code>Authorization: Bearer &lt;accessToken&gt;</code> and <code>X-CSRFToken</code> headers for mutation verbs (<code>POST</code>, <code>PUT</code>, <code>PATCH</code>, <code>DELETE</code>).</li>
+  <li><strong>Response Interceptor:</strong> Catches <code>401 Unauthorized</code> errors. If the request has not already retried, it collapses concurrent 401s into a single <code>refreshPromise</code> hitting <code>/token/refresh/</code>, updates the access token in memory, and replays all pending requests transparently.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<h2>4. Detailed Working of Each Backend Function & Class</h2>
+
+<h3>4.1 <code>apps/accounts/permissions.py</code></h3>
+<pre>
+class IsAdminUserOrStaff(BasePermission):
+    def has_permission(self, request, view):
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and (request.user.is_staff or request.user.is_superuser)
+        )
+</pre>
+<ul>
+  <li><strong>Purpose:</strong> Single source of truth for administrative access control.</li>
+  <li><strong>Working:</strong> Evaluates boolean validity of authenticated user identity. Ensures regular customers with active accounts cannot reach administrative routes even if they forge frontend state.</li>
+</ul>
+
+<h3>4.2 <code>apps/catalog/serializer.py</code> & <code>views.py</code></h3>
+<ul>
+  <li><code>Base64ImageField.to_internal_value(data)</code>: Inspects inbound image payload. If string begins with <code>data:image</code>, splits the MIME header, base64-decodes the binary content, and encapsulates it into a Django <code>ContentFile</code>. If a standard file object is passed, it delegates to <code>ImageField</code>.</li>
+  <li><code>AdminProductWriteSerializer.validate_series(value)</code>: Normalizes series input (e.g. mapping legacy <code>"ZERO"</code> to <code>"VOID"</code>) and validates against <code>Product.Series.choices</code>.</li>
+  <li><code>AdminProductWriteSerializer.validate_category(value)</code>: Accepts either a category ID or string name; automatically performs <code>Category.objects.get_or_create(name=value.strip())</code>.</li>
+  <li><code>AdminProductWriteSerializer.create(validated_data)</code> / <code>update(...)</code>: Wrapped in <code>@transaction.atomic</code>. Pops nested ingredients array, saves the primary product record, and synchronizes associated <code>Ingredient</code> records.</li>
+  <li><code>ProductDetailsAPI.destroy(request, *args, **kwargs)</code>:
+    <pre>
+instance = self.get_object()
+if instance.order_items.exists():
+    return Response(
+        {"detail": "Cannot decommission variant because it is referenced by existing completed orders. You may mark it inactive or reduce stock to 0 instead."},
+        status=status.HTTP_400_BAD_REQUEST,
+    )
+    </pre>
+    Prevents relational corruption by ensuring products with historical customer order records cannot be deleted from the database.
+  </li>
+</ul>
+
+<h3>4.3 <code>apps/orders/admin_views.py</code></h3>
+<ul>
+  <li><code>AdminOrderStatusSerializer.validate_status(value)</code>: Case-insensitively maps UI status strings (<code>"pending"</code>, <code>"deployed"</code>, <code>"delivered"</code>, <code>"cancelled"</code>) to exact Django model choices (<code>Order.Status.PLACED</code>, <code>Order.Status.SHIPPED</code>, <code>Order.Status.DELIVERED</code>, <code>Order.Status.CANCELLED</code>). Rejects unrecognized values with validation error messages.</li>
+  <li><code>AdminOrderListView.get_queryset()</code>: Executes <code>Order.objects.select_related("user").prefetch_related("items").order_by("-created_at")</code>, eliminating N+1 query bottlenecks during order manifest rendering.</li>
+  <li><code>AdminOrderDetailView.get()</code> & <code>patch()</code>: Looks up orders by <code>public_id</code> (UUID). The <code>patch</code> method validates the new status, updates the record, persists changes via <code>update_fields=["status", "updated_at"]</code>, and logs the administrative intervention.</li>
+</ul>
+
+<h3>4.4 <code>apps/accounts/admin_views.py</code></h3>
+<ul>
+  <li><code>AdminUserReadSerializer</code>: Computes dynamic attributes for directory inspection:
+    <ul>
+      <li><code>get_role</code>: Returns <code>"admin"</code> if staff/superuser, else <code>"customer"</code>.</li>
+      <li><code>get_status</code>: Returns <code>"Active"</code> if <code>is_active=True</code>, else <code>"Banned"</code>.</li>
+      <li><code>get_order_count</code>: Returns count of customer orders for instant fulfillment metric tracking.</li>
+    </ul>
+  </li>
+  <li><code>AdminUserDetailView.patch(request, pk)</code>:
+    <pre>
+if user.pk == request.user.pk:
+    return Response(
+        {"detail": "You cannot modify your own account through the admin panel."},
+        status=status.HTTP_403_FORBIDDEN,
+    )
+    </pre>
+    Protects administrators from accidentally locking themselves out of the system or revoking their own staff clearance.</li>
+</ul>
+
+<h3>4.5 <code>apps/orders/dashboard_views.py</code></h3>
+<ul>
+  <li><code>AdminDashboardView.get(request)</code>: Single high-efficiency analytics query executing:
+    <ul>
+      <li><code>User.objects.aggregate(total_users=Count("id"), active_users=Count("id", filter=Q(is_active=True)))</code></li>
+      <li><code>Product.objects.aggregate(total=Sum("stock"))</code> alongside count filters for low-stock (&le; 10 units) and out-of-stock (0 units).</li>
+      <li><code>Order.objects.aggregate</code> for total order volume, active deployments, and total gross revenue sum filtered strictly to <code>payment_status=PAID</code>.</li>
+      <li>Timeline aggregation using <code>.annotate(day=TruncDate("created_at"))</code> grouped by day for the 30-day transaction area chart.</li>
+      <li>Top-selling product query filtering paid line items, summing quantity and revenue, and resolving absolute media URLs for product preview cans.</li>
+    </ul>
+  </li>
+</ul>
+
+<div class="page-break"></div>
+
+<h2>5. Detailed Working of Each Frontend Admin Page</h2>
+
+<h3>5.1 <code>InventoryManager.jsx</code> (Inventory Management)</h3>
+<ul>
+  <li><strong>Query (<code>adminProducts</code>):</strong> Fetches all product records via <code>catalogClient.get("/products/")</code>. Passes raw records through <code>normaliseProduct()</code> to resolve relative Django media URLs against <code>VITE_CATALOG_API_URL</code>.</li>
+  <li><strong>Filtering Engine:</strong> Real-time client-side filtration on search query (name/UID), series dropdown (<code>FLOW</code>, <code>VOID</code>, <code>RITE</code>, <code>FORM</code>), and stock status (Low Stock &le; 10, Out of Stock = 0).</li>
+  <li><strong>Mutation (<code>saveMutation</code>):</strong> Maps modal form state (including base64 data-URIs from file dropzone) to backend schema. If editing, sends <code>PATCH /products/&lt;id&gt;/</code>; if creating, sends <code>POST /products/</code>. On success, invalidates both <code>adminProducts</code> and customer <code>products</code> caches and shows toast confirmation.</li>
+  <li><strong>Decommission Protection:</strong> Triggering "Wipe" opens a confirmation modal. If the backend rejects deletion due to existing orders, catches HTTP 400 and displays an error toast explaining that the variant cannot be removed.</li>
+</ul>
+
+<h3>5.2 <code>OrderManifest.jsx</code> (Order Manifest & Dispatch)</h3>
+<ul>
+  <li><strong>Query (<code>adminOrders</code>):</strong> Fetches orders via <code>ordersClient.get("/admin/")</code>. Normalizes backend order payload into display attributes, mapping model statuses (e.g. <code>shipped</code> &rarr; <code>Deployed</code>).</li>
+  <li><strong>Filtering & Search:</strong> Filters transactions by UUID, customer name, customer email, fulfillment status pill (<code>Pending</code>, <code>Deployed</code>, <code>Delivered</code>, <code>Cancelled</code>), and timeframe (<code>Today</code>, <code>This Week</code>, <code>All Time</code>).</li>
+  <li><strong>Detail Modal (Manifest):</strong> Clicking "Manifest" opens customer details, delivery address, phone, item breakdown with line-item rates, and total liability in INR.</li>
+  <li><strong>Status Mutation:</strong> Admin select dropdown triggers <code>ordersClient.patch("/admin/&lt;uuid&gt;/", { status })</code> with immediate cache invalidation.</li>
+</ul>
+
+<h3>5.3 <code>UserDirectory.jsx</code> (User Directory & Clearance)</h3>
+<ul>
+  <li><strong>Query (<code>adminUsers</code> & <code>adminOrders</code>):</strong> Fetches user directory via <code>accountsClient.get("/admin/users/")</code> and orders via <code>ordersClient.get("/admin/")</code>.</li>
+  <li><strong>Customer Intelligence Modal:</strong> Clicking "Inspect" evaluates lifetime value (total spent in INR), average order value, purchase frequency, affinity brand series, and transaction history.</li>
+  <li><strong>Security Clearance Mutation:</strong> Admins can suspend (<code>is_active: false</code>) or restore (<code>is_active: true</code>) customer accounts. The action button is disabled for the root administrator's own profile to prevent lockout.</li>
+</ul>
+
+<h3>5.4 <code>AdminDashboard.jsx</code> (System Telemetry & Analytics)</h3>
+<ul>
+  <li><strong>Query (<code>adminDashboard</code>):</strong> Hits <code>ordersClient.get("/admin/dashboard/")</code>. Eliminates multiple disparate API calls.</li>
+  <li><strong>Visualization Elements:</strong>
+    <ul>
+      <li><strong>Transaction Performance Matrix:</strong> Responsive SVG AreaChart plotting 30-day gross revenue.</li>
+      <li><strong>Individual Payment Streams:</strong> BarChart plotting recent individual captured transactions.</li>
+      <li><strong>Financial HUD:</strong> Real-time counts of gross revenue (INR), active user accounts, and dispatch volumes.</li>
+      <li><strong>Top Seller Variants:</strong> Ranked showcase of best-performing products with units sold, total revenue, and product thumbnails.</li>
+    </ul>
+  </li>
+</ul>
+
+<h2>6. Verification, Validation & Production Readiness</h2>
+<div class="callout">
+  <div class="callout-title">Validation Sign-off</div>
+  All 44 automated integration tests executed against the test runner passed cleanly in 17.9 seconds. The frontend Vite production build succeeded with 0 errors across 1,775 modules.
+</div>
+
+<p>
+The VOID E-Commerce Admin Panel is now completely decoupled from JSON-Server and fully integrated with Django REST Framework, running production-grade authentication, permissions, and transactional guarantees.
+</p>
+
+</body>
+</html>
+
