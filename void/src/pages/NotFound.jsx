@@ -1,6 +1,6 @@
 // src/pages/NotFound.jsx
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 
 const NotFound = () => {
   return (
@@ -12,7 +12,7 @@ const NotFound = () => {
 
       <div className="relative z-10 text-center">
         {/* The Error Code with Flicker */}
-        <motion.h1 
+        <Motion.h1 
           animate={{ 
             opacity: [1, 0.8, 1, 0.5, 1],
             x: [0, -2, 2, -1, 0] 
@@ -25,7 +25,7 @@ const NotFound = () => {
           className="text-[10rem] md:text-[15rem] font-black italic uppercase tracking-tighter text-white/10 leading-none select-none"
         >
           404
-        </motion.h1>
+        </Motion.h1>
 
         {/* Tactical Error Message */}
         <div className="mt-[-2rem] md:mt-[-4rem]">

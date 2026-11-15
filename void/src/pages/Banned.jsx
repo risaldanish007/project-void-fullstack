@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { logout } from '../store/authSlice'; // Keep if you plan to add a logout button later
 
 const Banned = () => {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
-  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   // Modal State

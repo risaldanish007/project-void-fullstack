@@ -7,7 +7,7 @@ import {
   AdaptiveEvents,
   useProgress,
 } from "@react-three/drei";
-import { motion } from "framer-motion";
+import { motion as Motion } from "framer-motion";
 
 function CanModel({ shouldAnimate }) {
   const { scene } = useGLTF("/3d/can5.glb");
@@ -16,21 +16,24 @@ function CanModel({ shouldAnimate }) {
 
   const [introDone, setIntroDone] = useState(!shouldAnimate);
 
+  // Vertical positioning adjustment
+  const verticalOffset = 1;
+
   // metallic look
   useEffect(() => {
     scene.traverse((child) => {
       if (child.isMesh) {
-        child.material.metalness = .5;
-        child.material.roughness = .3;
+        child.material.metalness = 0.8;
+        child.material.roughness = 0.3;
         child.material.envMapIntensity = 2;
       }
     });
   }, [scene]);
 
-  // start below screen if animating
+  // start below final position if animating
   useEffect(() => {
     if (shouldAnimate && ref.current) {
-      ref.current.position.y = -1.2;
+      ref.current.position.y = verticalOffset - 1.2;
     }
   }, [shouldAnimate]);
 
@@ -39,19 +42,21 @@ function CanModel({ shouldAnimate }) {
 
     const t = state.clock.getElapsedTime();
 
-    // ENTRY ANIMATION (only once)
+    // ENTRY ANIMATION
     if (!introDone) {
-      ref.current.position.y += (0 - ref.current.position.y) * 0.05;
+      ref.current.position.y +=
+        (verticalOffset - ref.current.position.y) * 0.05;
 
-      if (Math.abs(ref.current.position.y) < 0.01) {
-        ref.current.position.y = 0;
+      if (Math.abs(ref.current.position.y - verticalOffset) < 0.01) {
+        ref.current.position.y = verticalOffset;
         setIntroDone(true);
       }
       return;
     }
 
     // IDLE FLOATING
-    ref.current.position.y = Math.sin(t * 1.2) * 0.03;
+    ref.current.position.y =
+      verticalOffset + Math.sin(t * 1.2) * 0.03;
 
     const baseRotation = Math.PI;
 
@@ -103,13 +108,13 @@ export default function CanViewer() {
   }
 
   return (
-    <motion.div
+    <Motion.div
       initial={shouldAnimate ? { opacity: 0 } : false}
       animate={ready ? { opacity: 1 } : { opacity: 0 }}
       transition={{ duration: 1.2, ease: "easeOut" }}
       className="w-full"
     >
-      <div className="absolute inset-0 h-screen w-full pointer-events-none">
+      <div className="absolute inset-0 h-screen w-screen pointer-events-none">
         <Canvas
           camera={{ position: [0, 0, 7] }}
           dpr={[1, 1.5]}
@@ -118,17 +123,16 @@ export default function CanViewer() {
           <AdaptiveDpr pixelated />
           <AdaptiveEvents />
 
-          <ambientLight intensity={0.6} />
-          <Environment preset="studio" resolution={200} />
-          <directionalLight position={[5, 5, 9]} intensity={1.5} />
+          <ambientLight intensity={0} />
+          <Environment preset="studio" resolution={-1} />
+          <directionalLight position={[5, 5, -9]} intensity={-1} />
 
-          {/* THE FIX: Local Suspense protects the Canvas on reload */}
           <Suspense fallback={null}>
             <ModelWithReady onReady={() => setReady(true)} />
           </Suspense>
         </Canvas>
       </div>
-    </motion.div>
+    </Motion.div>
   );
 }
 

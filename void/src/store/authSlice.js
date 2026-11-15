@@ -2,19 +2,36 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import {
   accountsClient,
   ensureCsrfToken,
-  setAccessToken,
   clearAccessToken,
+  refreshAccessToken,
+  logoutSession,
 } from "../api/apiClient";
 
 let restoreRequest = null;
+const EXPLICIT_LOGOUT_KEY = "void_session_logged_out";
+
+const hasExplicitLogout = () => {
+  try {
+    return localStorage.getItem(EXPLICIT_LOGOUT_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+
+export const clearExplicitLogout = () => {
+  try {
+    localStorage.removeItem(EXPLICIT_LOGOUT_KEY);
+  } catch {
+    // Storage can be disabled; server-side logout still remains authoritative.
+  }
+};
 
 const requestSessionRestore = () => {
   if (!restoreRequest) {
     restoreRequest = (async () => {
       await ensureCsrfToken();
 
-      const tokenResponse = await accountsClient.post("/token/refresh/", {});
-      setAccessToken(tokenResponse.data.access);
+      await refreshAccessToken();
 
       const profileResponse = await accountsClient.get("/profile/");
       return profileResponse.data;
@@ -29,6 +46,14 @@ const requestSessionRestore = () => {
 export const restoreSession = createAsyncThunk(
   "auth/restoreSession",
   async (_, { rejectWithValue }) => {
+    if (hasExplicitLogout()) {
+      clearAccessToken();
+      return rejectWithValue({
+        status: 401,
+        message: "This session was logged out.",
+      });
+    }
+
     try {
       return await requestSessionRestore();
     } catch (error) {
@@ -43,8 +68,13 @@ export const restoreSession = createAsyncThunk(
 
 export const logoutFromServer = () => async (dispatch) => {
   try {
-    await ensureCsrfToken();
-    await accountsClient.post("/logout/", {});
+    localStorage.setItem(EXPLICIT_LOGOUT_KEY, "1");
+  } catch {
+    // Storage can be disabled; clear in-memory credentials regardless.
+  }
+
+  try {
+    await logoutSession();
   } catch (error) {
     console.error("Server logout request failed:", error);
   } finally {

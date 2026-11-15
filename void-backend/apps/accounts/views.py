@@ -18,10 +18,3 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
-
-# $env:DB_NAME = "void_db"
-# $env:DB_USER = "void_user"
-# $env:DB_PASSWORD = "risaldanish10"
-# $env:DB_HOST = "127.0.0.1"
-# $env:DB_PORT = "5432"
-

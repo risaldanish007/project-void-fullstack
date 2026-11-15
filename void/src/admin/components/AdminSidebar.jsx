@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom';
+import { ArrowLeft, LayoutDashboard, Package, ShoppingBag, Users } from 'lucide-react';
 
 const AdminSidebar = () => {
   const links = [
-    { name: 'Dashboard', path: '/admin', icon: '⌬' },
-    { name: 'Inventory', path: '/admin/inventory', icon: '⧉' },
-    { name: 'orders', path: '/admin/orders', icon: '▨' }, // New Sector
-    { name: 'Users', path: '/admin/users', icon: '⚇' },  // New Sector
+    { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
+    { name: 'Inventory', path: '/admin/inventory', icon: Package },
+    { name: 'Orders', path: '/admin/orders', icon: ShoppingBag },
+    { name: 'Users', path: '/admin/users', icon: Users },
   ];
 
   return (
@@ -37,7 +38,7 @@ const AdminSidebar = () => {
                 : 'text-gray-500 hover:text-white hover:bg-white/5'}
             `}
           >
-            <span className="text-[14px] leading-none">{link.icon}</span> 
+            <link.icon size={16} aria-hidden="true" />
             {link.name}
           </NavLink>
         ))}
@@ -49,7 +50,7 @@ const AdminSidebar = () => {
           to="/" 
           className="group flex items-center gap-1 md:gap-2 text-white/50 md:text-white/20 hover:text-green-500 font-mono text-[7px] sm:text-[8px] md:text-[9px] tracking-wide md:tracking-widest uppercase transition-colors whitespace-nowrap"
         >
-          <span className="group-hover:-translate-x-1 transition-transform">←</span> 
+          <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
           Exit_Console
         </NavLink>
       </div>

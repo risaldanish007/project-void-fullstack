@@ -38,9 +38,10 @@ import ServerUnavailable from "./components/common/ServerUnavailable";
 import { AppStartupProvider } from "./components/common/AppStartupContext";
 
 import { logout, restoreSession } from "./store/authSlice";
+import { clearAccessToken } from "./api/apiClient";
 import { fetchCurrentCart } from "./store/cartSlice";
 
-import { ToastContainer } from "react-toastify";
+import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
 import "./index.css";
@@ -53,7 +54,7 @@ let bootstrapPromise;
 const isBackendUnavailable = (action) => {
   if (action.meta?.requestStatus !== "rejected") return false;
   const status = action.payload?.status;
-  return status == null || status >= 500;
+  return status == null || [502, 503, 504].includes(status);
 };
 
 const initializeApp = (dispatch) => {
@@ -193,11 +194,25 @@ function App() {
 
   // If Django rejects the refresh cookie, clear the Redux auth state.
   useEffect(() => {
-    const handleAuthExpired = () => dispatch(logout());
+    const handleAuthExpired = (event) => {
+      dispatch(logout());
+      if (event.detail?.notifyUser) {
+        toast.info("Your session has expired. Please log in again.");
+      }
+    };
+
+    const handleCrossTabLogout = (event) => {
+      if (event.key === "void_session_logged_out" && event.newValue === "1") {
+        clearAccessToken();
+        dispatch(logout());
+      }
+    };
 
     window.addEventListener("void:auth-expired", handleAuthExpired);
+    window.addEventListener("storage", handleCrossTabLogout);
     return () => {
       window.removeEventListener("void:auth-expired", handleAuthExpired);
+      window.removeEventListener("storage", handleCrossTabLogout);
     };
   }, [dispatch]);
 

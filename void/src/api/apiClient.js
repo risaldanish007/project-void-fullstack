@@ -68,19 +68,33 @@ export const ensureCsrfToken = async () => {
 // ---------------------------------------------------------------------------
 // Shared refresh logic – collapses concurrent 401 retries into one request.
 // ---------------------------------------------------------------------------
-const refreshAccessToken = () => {
+const withSessionRefreshLock = (callback) => {
+  if (typeof navigator !== "undefined" && navigator.locks?.request) {
+    return navigator.locks.request("void-session-refresh", callback);
+  }
+  return callback();
+};
+
+export const refreshAccessToken = () => {
   if (!refreshPromise) {
-    refreshPromise = accountsClient
-      .post("/token/refresh/", {})
+    refreshPromise = withSessionRefreshLock(() =>
+      accountsClient.post("/token/refresh/", {})
+    )
       .then(({ data }) => {
         setAccessToken(data.access);
         return data.access;
       })
       .catch((error) => {
         if (error.response?.status === 401) {
+          const notifyUser = Boolean(accessToken);
           clearAccessToken();
-          window.dispatchEvent(new Event("void:auth-expired"));
+          window.dispatchEvent(
+            new CustomEvent("void:auth-expired", {
+              detail: { notifyUser },
+            })
+          );
         }
+        // Network and 5xx failures leave a potentially valid session intact.
         throw error;
       })
       .finally(() => {
@@ -88,6 +102,20 @@ const refreshAccessToken = () => {
       });
   }
   return refreshPromise;
+};
+
+export const logoutSession = async () => {
+  await ensureCsrfToken();
+
+  // Older browsers lack Web Locks; avoid racing this tab's in-flight rotation.
+  if (
+    !(typeof navigator !== "undefined" && navigator.locks?.request) &&
+    refreshPromise
+  ) {
+    await refreshPromise.catch(() => undefined);
+  }
+
+  return withSessionRefreshLock(() => accountsClient.post("/logout/", {}));
 };
 
 // ---------------------------------------------------------------------------

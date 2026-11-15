@@ -10,10 +10,11 @@ import {
     cartClient,
     ensureCsrfToken,
     setAccessToken,
-    clearAccessToken
+    clearAccessToken,
 } from "../api/apiClient";
 
 import { fetchCurrentCart } from "../store/cartSlice";
+import { clearExplicitLogout } from "../store/authSlice";
 
 const Login = () => {
     const [email, setEmail] = useState("");
@@ -34,6 +35,7 @@ const Login = () => {
             );
 
             setAccessToken(tokenResponse.data.access);
+            clearExplicitLogout();
 
             const profileResponse = await accountsClient.get("/profile/");
 

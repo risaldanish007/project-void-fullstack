@@ -1,16 +1,22 @@
-# React + Vite
+# VOID storefront
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React/Vite storefront for the VOID Django API.
 
-Currently, two official plugins are available:
+## Local frontend setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Install Node.js 20 or newer.
+2. Copy .env.example to .env.local and set the four API URLs.
+3. Run npm ci, then npm run dev.
+4. Run npm run lint and npm run build before release.
 
-## React Compiler
+The frontend is a static site. Configure the host to serve the dist/ directory and rewrite client-side routes to index.html. VITE_* values are public build-time URLs; never put secrets in them.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Production deployment
 
-## Expanding the ESLint configuration
+1. Set the four VITE_*_API_URL values to HTTPS API endpoints before building.
+2. Run npm ci, npm run lint, and npm run build.
+3. Publish dist/ to a static host with SPA route fallback.
+4. Configure API host, CORS, and CSRF origins as documented in ../void-backend/README.md.
+5. Verify registration/email verification, login/refresh/logout, catalog, cart, checkout, payment verification, and admin flows before opening traffic.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+The old JSON Server mock API and its sample customer/order data have been retired.

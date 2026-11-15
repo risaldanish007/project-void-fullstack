@@ -10,6 +10,7 @@ Tests cover:
   - UserProfileSerializer exposes role / status / name correctly
 """
 import io
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -18,7 +19,8 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 
 from apps.catalog.models import Category, Ingredient, Product
 from apps.orders.models import Order, OrderItem
@@ -131,6 +133,95 @@ class BaseTestCase(TestCase):
             unit_price_usd=Decimal("3.99"),
             unit_price_inr=Decimal("335.16"),
         )
+
+
+# ===========================================================================
+# JWT refresh and logout lifecycle
+# ===========================================================================
+
+class AuthTokenLifecycleTests(BaseTestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.refresh_url = "/api/v1/accounts/token/refresh/"
+        self.logout_url = "/api/v1/accounts/logout/"
+        self.customer.is_email_verified = True
+        self.customer.save(update_fields=["is_email_verified"])
+
+    def post_refresh(self, token):
+        self.client.cookies["void_refresh"] = str(token)
+        return self.client.post(self.refresh_url, {}, format="json")
+
+    def test_login_and_refresh_rotate_cookie_and_blacklist_old_token(self):
+        login = self.client.post(
+            "/api/v1/accounts/login/",
+            {"email": self.customer.email, "password": "pass1234!!"},
+            format="json",
+        )
+        self.assertEqual(login.status_code, status.HTTP_200_OK)
+        self.assertIn("access", login.data)
+        self.assertTrue(login.cookies["void_refresh"]["httponly"])
+
+        old_token_string = login.cookies["void_refresh"].value
+        old_token = RefreshToken(old_token_string)
+        refreshed = self.post_refresh(old_token_string)
+
+        self.assertEqual(refreshed.status_code, status.HTTP_200_OK)
+        self.assertIn("access", refreshed.data)
+        new_token_string = refreshed.cookies["void_refresh"].value
+        self.assertNotEqual(old_token_string, new_token_string)
+        self.assertTrue(
+            BlacklistedToken.objects.filter(token__jti=old_token["jti"]).exists()
+        )
+
+        replayed = self.post_refresh(old_token_string)
+        self.assertEqual(replayed.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(
+            replayed.data["detail"],
+            "Your session has expired. Please log in again.",
+        )
+        self.assertNotIn("Traceback", replayed.content.decode("utf-8"))
+
+        login_again = self.client.post(
+            "/api/v1/accounts/login/",
+            {"email": self.customer.email, "password": "pass1234!!"},
+            format="json",
+        )
+        self.assertEqual(login_again.status_code, status.HTTP_200_OK)
+        self.assertNotEqual(
+            login_again.cookies["void_refresh"].value,
+            old_token_string,
+        )
+
+    def test_expired_refresh_token_returns_401_and_clears_cookie(self):
+        refresh = RefreshToken.for_user(self.customer)
+        refresh.set_exp(lifetime=timedelta(seconds=-60))
+
+        response = self.post_refresh(str(refresh))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(
+            response.data["detail"],
+            "Your session has expired. Please log in again.",
+        )
+        self.assertEqual(response.cookies["void_refresh"]["max-age"], 0)
+
+    def test_logout_blacklists_refresh_cookie(self):
+        refresh = RefreshToken.for_user(self.customer)
+        refresh_jti = refresh["jti"]
+        self.client.cookies["void_refresh"] = str(refresh)
+
+        response = self.client.post(self.logout_url, {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertTrue(
+            BlacklistedToken.objects.filter(token__jti=refresh_jti).exists()
+        )
+        self.assertEqual(response.cookies["void_refresh"]["max-age"], 0)
+
+    def test_missing_refresh_cookie_returns_401(self):
+        response = self.client.post(self.refresh_url, {}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["detail"], "Refresh cookie is missing.")
 
 
 # ===========================================================================

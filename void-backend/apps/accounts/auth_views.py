@@ -1,4 +1,5 @@
 from django.conf import settings
+import logging
 from django.middleware.csrf import get_token
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
@@ -18,6 +19,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import EmailVerificationSerializer, UserProfileSerializer
 from apps.accounts.services.otp_service import verify_otp
+
+logger = logging.getLogger(__name__)
 
 REFRESH_COOKIE_NAME = "void_refresh"
 REFRESH_COOKIE_PATH = "/api/v1/accounts/"
@@ -82,7 +85,6 @@ class CookieTokenLoginView(APIView):
             "user": user_data,
         })
         set_refresh_cookie(response, tokens["refresh"])
-        # print("refresh :",tokens["refresh"], "access",response.data)
         return response
 
 class CookieTokenRefreshView(APIView):
@@ -103,9 +105,17 @@ class CookieTokenRefreshView(APIView):
 
         serializer = TokenRefreshSerializer(data={"refresh": refresh_token})
 
-        if not serializer.is_valid():
+        try:
+            is_valid = serializer.is_valid()
+        except TokenError:
+            # BlacklistMixin.verify raises TokenError for a rotated/reused token.
+            # It is an expected expired-session condition, not a server error.
+            logger.info("Rejected a blacklisted or invalid refresh token.")
+            is_valid = False
+
+        if not is_valid:
             response = Response(
-                serializer.errors,
+                {"detail": "Your session has expired. Please log in again."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
             clear_refresh_cookie(response)

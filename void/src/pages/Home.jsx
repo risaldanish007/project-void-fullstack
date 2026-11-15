@@ -69,16 +69,16 @@ const Home = () => {
         <div 
           className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat" 
           style={{ 
-            backgroundImage: "url('/images/void-bg-vin.png')",
+            backgroundImage: "url('/images/555.jpg')",
             filter: "brightness(0.7)"
           }}
         />
-        <div className="text-center z-10 pointer-events-none mb-32">
+        {/* <div className="text-center z-10 pointer-events-none mb-32">
           <h1 className="text-[clamp(2.5rem,12vw,8rem)] font-black tracking-tighter text-white/30 uppercase italic leading-none drop-shadow-2xl">
             Pure Signal.
           </h1>
-        </div>
-        <div className="w-full h-full absolute inset-0 z-11"> 
+        </div> */}
+        <div className="w-screen h-screen  absolute inset-0 z-11"> 
           <CanViewer />
         </div>
       </section>

@@ -1,24 +1,13 @@
-const jsonServer = require("json-server");
-const express = require("express");
-
-const app = express();
-const router = jsonServer.router("db.json");
-const middlewares = jsonServer.defaults();
-
-const PORT = process.env.PORT || 5000;
-
-app.use(middlewares);
-app.use(express.json());
-
-/**
- * Health check – MUST be fast, no DB, no auth
- */
-app.get("/health", (_req, res) => {
-  res.status(200).json({ status: "ok" });
-});
-
-app.use(router);
-
-app.listen(PORT, () => {
-  console.log(`Ecommerce JSON Server running on port ${PORT}`);
+import { createServer } from "node:http";
+const port = Number(process.env.PORT || 5000);
+createServer((request, response) => {
+  if (request.url === "/health" && request.method === "GET") {
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify({ status: "ok" }));
+    return;
+  }
+  response.writeHead(404, { "content-type": "application/json" });
+  response.end(JSON.stringify({ detail: "Not found." }));
+}).listen(port, "0.0.0.0", () => {
+  console.log("VOID health server listening on port " + port);
 });

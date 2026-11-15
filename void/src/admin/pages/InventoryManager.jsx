@@ -5,6 +5,7 @@ import AddProductModal from "../components/AddProductModal";
 import { toast } from 'react-toastify';
 import VoidLoader from "../../styles/VoidLoader";
 import ApiError from "../../components/common/ApiError";
+import AdminPageHeader from "../components/AdminPageHeader";
 
 // Build a full image URL from a relative media path returned by Django.
 const toImageUrl = (path) => {
@@ -141,7 +142,7 @@ const InventoryManager = () => {
   }
 
   return (
-    <div className="animate-in fade-in duration-700 relative pb-20">
+    <div className="admin-page animate-in fade-in duration-700 relative pb-16">
       {/* --- CUSTOM DECOMMISSION ALERT --- */}
       {productToDelete && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/95 backdrop-blur-xl p-6">
@@ -169,17 +170,8 @@ const InventoryManager = () => {
       )}
 
       {/* --- MAIN HEADER --- */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
-        <div>
-          <h2 className="text-2xl font-bold uppercase italic tracking-[0.2em] text-white/60">Active_Inventory</h2>
-          <p className="text-[10px] font-mono text-white/50 uppercase tracking-widest mt-1 font-bold">
-            Uplink Status: {filteredProducts?.length} Variants detected
-          </p>
-        </div>
-        <button onClick={() => setIsModalOpen(true)} className="bg-white text-black px-8 py-4 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-green-500 hover:text-white transition-all shadow-xl">
-          + Initialize New Variant
-        </button>
-      </div>
+      <AdminPageHeader title="Inventory" description={`${filteredProducts?.length ?? 0} variants match the current filters.`}
+        action={<button onClick={() => setIsModalOpen(true)} className="bg-white text-black px-5 py-3 rounded-lg font-semibold text-xs hover:bg-green-400 transition-colors">+ Add variant</button>} />
 
       {/* --- FILTER BAR --- */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -209,7 +201,7 @@ const InventoryManager = () => {
       </div>
 
       {/* --- TABLE CONTENT --- */}
-      <div className="overflow-hidden border border-white/10 rounded-3xl bg-[#0a0a0a]/60 backdrop-blur-md shadow-2xl">
+      <div className="admin-table-scroll">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-white/10 text-[10px] font-mono text-white/60 uppercase tracking-[0.3em] bg-white/[0.03]">
@@ -277,6 +269,7 @@ const InventoryManager = () => {
       </div>
 
       <AddProductModal
+        key={(isModalOpen ? "open-" : "closed-") + (selectedProduct?.id ?? "new")}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSave={(data) => saveMutation.mutate(data)}

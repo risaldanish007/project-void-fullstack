@@ -1,6 +1,6 @@
 // src/pages/About.jsx
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 
 const About = () => {
   const container = {
@@ -17,7 +17,7 @@ const About = () => {
   };
 
   return (
-    <motion.div 
+    <Motion.div 
       initial="hidden"
       animate="show"
       variants={container}
@@ -29,7 +29,7 @@ const About = () => {
       <div className="max-w-6xl mx-auto relative z-10">
         
         {/* Header: Core Identity */}
-        <motion.header variants={item} className="mb-32 flex flex-col md:flex-row justify-between items-end gap-8 border-b border-white/5 pb-12">
+        <Motion.header variants={item} className="mb-32 flex flex-col md:flex-row justify-between items-end gap-8 border-b border-white/5 pb-12">
           <div>
             <span className="text-green-500 font-mono text-[9px] tracking-[0.6em] uppercase block mb-4">
               Protocol_Origin // v.2.6
@@ -43,10 +43,10 @@ const About = () => {
               Biological hardware optimization. Engineered for the digital operative.
             </p>
           </div>
-        </motion.header>
+        </Motion.header>
 
         {/* Section 1: The Philosophy (The Why) */}
-        <motion.section variants={item} className="grid md:grid-cols-12 gap-12 mb-48">
+        <Motion.section variants={item} className="grid md:grid-cols-12 gap-12 mb-48">
           <div className="md:col-span-5 italic text-white/20 font-mono text-[10px] uppercase tracking-[0.4em]">
             // 01_us
           </div>
@@ -62,10 +62,10 @@ const About = () => {
               Signal over noise. Baseline focus. Infinite uptime.
             </p>
           </div>
-        </motion.section>
+        </Motion.section>
 
         {/* Section 2: Product Taxonomy (The How) */}
-        <motion.section variants={item} className="mb-48">
+        <Motion.section variants={item} className="mb-48">
           <div className="flex items-center gap-6 mb-16">
             <h3 className="italic text-white/20 font-mono text-[10px] uppercase tracking-[0.4em] whitespace-nowrap">
               02_braches_
@@ -114,10 +114,10 @@ const About = () => {
               </div>
             ))}
           </div>
-        </motion.section>
+        </Motion.section>
 
         {/* Section 3: Technical Specs (The Details) */}
-        <motion.section variants={item} className="grid md:grid-cols-12 gap-12 mb-40">
+        <Motion.section variants={item} className="grid md:grid-cols-12 gap-12 mb-40">
           <div className="md:col-span-5 italic text-white/20 font-mono text-[10px] uppercase tracking-[0.4em]">
             // 03_Schematics
           </div>
@@ -134,9 +134,9 @@ const About = () => {
               </div>
             ))}
           </div>
-        </motion.section>
+        </Motion.section>
       </div>
-    </motion.div>
+    </Motion.div>
   );
 };
 

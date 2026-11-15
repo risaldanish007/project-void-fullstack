@@ -5,6 +5,7 @@ import { accountsClient, ordersClient } from "../../api/apiClient";
 import { toast } from 'react-toastify';
 import VoidLoader from "../../styles/VoidLoader";
 import ApiError from "../../components/common/ApiError";
+import AdminPageHeader from "../components/AdminPageHeader";
 
 const UserDirectory = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -54,18 +55,7 @@ const UserDirectory = () => {
     },
   });
 
-  const roleMutation = useMutation({
-    mutationFn: ({ id, is_staff }) =>
-      accountsClient.patch(`/admin/users/${id}/`, { is_staff }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
-      toast.success("SYSTEM_UPDATE: Clearance levels updated.");
-    },
-    onError: (err) => {
-      const detail = err.response?.data?.detail || "Role change failed.";
-      toast.error(`ERROR: ${detail}`);
-    },
-  });
+
 
   // ── Filtering ──────────────────────────────────────────────────────────────
   const filteredUsers = users?.filter(user => {
@@ -97,7 +87,7 @@ const UserDirectory = () => {
   }
 
   return (
-    <div className="animate-in fade-in duration-700 relative pb-20 px-4 md:px-0">
+    <div className="admin-page animate-in fade-in duration-700 relative pb-16 px-4 md:px-0">
 
       {/* --- IDENTITY MANIFEST MODAL --- */}
       {inspectUser && (() => {
@@ -110,7 +100,7 @@ const UserDirectory = () => {
 
         return (
           <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/95 backdrop-blur-xl p-6">
-            <div className="bg-[#0a0a0a] border border-white/10 w-full max-w-3xl rounded-[3rem] p-10 shadow-2xl relative overflow-hidden">
+            <div className="admin-modal-panel bg-[#0a0a0a] border border-white/10 w-full max-w-3xl rounded-2xl p-5 sm:p-8 shadow-2xl relative overflow-hidden">
               <div className="flex justify-between items-start mb-10">
                 <div>
                   <span className="text-cyan-500 font-mono text-[10px] tracking-[0.5em] uppercase block mb-1 font-black">Customer Account Profile</span>
@@ -228,12 +218,7 @@ const UserDirectory = () => {
       {/* --- HEADER --- */}
       <div className="max-w-6xl mx-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
-          <div>
-            <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">User Directory</h2>
-            <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest mt-1">
-              {filteredUsers?.length} Active Records
-            </p>
-          </div>
+          <AdminPageHeader title="Users" description={`${filteredUsers?.length ?? 0} accounts match the current filters.`} />
           <div className="w-full md:w-auto flex flex-col md:flex-row items-center gap-4">
             <input
               type="text"
@@ -259,7 +244,7 @@ const UserDirectory = () => {
         </nav>
 
         {/* --- DIRECTORY TABLE --- */}
-        <div className="overflow-hidden border border-white/10 rounded-[2rem] bg-[#0a0a0a]/40 backdrop-blur-sm">
+        <div className="admin-table-scroll">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-white/5 text-[9px] font-mono text-white/30 uppercase tracking-[0.3em]">

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { catalogClient } from '../api/apiClient';
 import { addProductToCart } from "../store/cartSlice";
 import VoidLoader from "../styles/VoidLoader";
@@ -78,7 +78,7 @@ const handleAddToCart = async (e, product) => {
             const isLowStock = variant.stock > 0 && variant.stock <= 5;
 
             return (
-              <motion.div
+              <Motion.div
                 key={variant.id}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -139,7 +139,7 @@ const handleAddToCart = async (e, product) => {
                     </div>
                   </div>
                 </Link>
-              </motion.div>
+              </Motion.div>
             );
           })}
         </div>

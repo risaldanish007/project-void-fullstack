@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 
 // --- DROPZONE COMPONENT (With Compression Protocol) ---
@@ -110,35 +110,22 @@ const FileUploadZone = ({ label, value, onChange, error, id }) => {
   );
 };
 
+const createFormData = (initialData) => ({
+  name: '', description: '', price: '', image: '',
+  imageBg: '/imagesBg/void-prod-bg.png', category: 'Energy',
+  series: 'FLOW', stock: '100', ...(initialData || {}),
+  ingredients: initialData?.ingredients?.length
+    ? initialData.ingredients.map((ingredient) => ({ ...ingredient }))
+    : [{ name: '', benefit: '' }],
+});
+
 // --- MAIN COMPONENT ---
 const AddProductModal = ({ isOpen, onClose, onSave, initialData }) => {
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: '',
-    image: '',
-    imageBg: '/imagesBg/void-prod-bg.png',
-    category: 'Energy',
-    series: 'FLOW',
-    stock: '100',
-    ingredients: [{ name: '', benefit: '' }]
-  });
+  const [formData, setFormData] = useState(() => createFormData(initialData));
 
   const [errors, setErrors] = useState({});
 
-  useEffect(() => {
-    if (initialData) {
-      setFormData(initialData);
-    } else {
-      setFormData({
-        name: '', description: '', price: '', image: '',
-        imageBg: '/imagesBg/void-prod-bg.png', category: 'Energy',
-        series: 'FLOW', stock: '100', 
-        ingredients: [{ name: '', benefit: '' }]
-      });
-    }
-    setErrors({});
-  }, [initialData, isOpen]);
+
 
   // --- Validation Protocol ---
   const validateForm = () => {
@@ -208,7 +195,7 @@ const AddProductModal = ({ isOpen, onClose, onSave, initialData }) => {
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4 overflow-y-auto">
-      <div className="bg-[#0a0a0a] border border-white/10 w-full max-w-4xl rounded-[3rem] p-10 shadow-2xl my-8">
+      <div className="admin-modal-panel bg-[#0a0a0a] border border-white/10 w-full max-w-4xl rounded-2xl p-5 sm:p-8 shadow-2xl my-4">
         
         <header className="mb-10 border-b border-white/5 pb-8 flex justify-between items-end">
           <div>
