@@ -253,7 +253,7 @@ CELERY_BEAT_SCHEDULE = {
         "task": "accounts.clear_expired_sessions",
         "schedule": crontab(hour=22, minute=0),  # 03:30 IST
     },
-        "cleanup-expired-otps": {
+    "cleanup-expired-otps": {
         "task": "accounts.cleanup_expired_otps",
         "schedule": crontab(hour=22, minute=30),  # 04:00 IST
     },

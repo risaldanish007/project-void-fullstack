@@ -7,7 +7,7 @@ from apps.cart.models import Cart
 
 
 class Command(BaseCommand):
-    help = "Delete guest carts that have been inactive for more than 15 days."
+    help = "Delete guest carts that have been inactive for more than 31 days."
 
     def add_arguments(self, parser):
         parser.add_argument(
