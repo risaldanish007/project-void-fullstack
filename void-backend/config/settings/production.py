@@ -31,3 +31,7 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
+
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL")
+if not CELERY_BROKER_URL:
+    raise ImproperlyConfigured("CELERY_BROKER_URL must be set in production.")

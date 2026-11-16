@@ -15,6 +15,7 @@ import os
 import sys
 from datetime import timedelta
 from dotenv import load_dotenv
+from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -226,5 +227,27 @@ CSRF_TRUSTED_ORIGINS = [
 
 USD_TO_INR_RATE = "83.000000"
 
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0")
+CELERY_TIMEZONE = "UTC"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_TASK_IGNORE_RESULT = True
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_TASK_TIME_LIMIT = 300
+CELERY_TASK_SOFT_TIME_LIMIT = 240
 
-
+CELERY_BEAT_SCHEDULE = {
+    "release-expired-pending-orders": {
+        "task": "orders.cleanup_pending_orders",
+        "schedule": crontab(minute="*/5"),
+        "options": {"expires": 240},
+    },
+    "cleanup-guest-carts": {
+        "task": "cart.cleanup_guest_carts",
+        "schedule": crontab(hour=21, minute=30),  # 03:00 IST
+    },
+    "clear-expired-sessions": {
+        "task": "accounts.clear_expired_sessions",
+        "schedule": crontab(hour=22, minute=0),  # 03:30 IST
+    },
+}
