@@ -28,7 +28,7 @@ db.sqlite3-journal
 # Keep actual project assets
 !/void-backend/media/products/
 !/void-backend/media/products/**
-
+!/void-backend/media/products/test*.jpg
 !/void-backend/media/backgrounds/
 !/void-backend/media/backgrounds/**
 
