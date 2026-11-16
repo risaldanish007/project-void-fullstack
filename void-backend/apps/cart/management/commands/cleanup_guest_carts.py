@@ -17,7 +17,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        cutoff = timezone.now() - timedelta(days=15)
+        cutoff = timezone.now() - timedelta(days=31)
 
         old_guest_carts = Cart.objects.filter(
             user__isnull=True,

@@ -22,6 +22,9 @@ env/
 db.sqlite3
 db.sqlite3-journal
 
+celerybeat-schedule*
+test-venv/
+ 
 # Ignore other uploaded/generated media
 /void-backend/media/*
 
