@@ -3,6 +3,12 @@ import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { accountsClient } from "../api/apiClient";
+import {
+  clearPendingRegistrationEmail,
+  savePendingRegistrationEmail,
+} from "../utils/pendingRegistration";
+
+const REGISTER_REQUEST_TIMEOUT_MS = 30000;
 
 const EyeIcon = ({ visible }) => (
   <svg
@@ -48,38 +54,56 @@ const Register = () => {
     mutationFn: async (registrationData) => {
       const response = await accountsClient.post(
         "/register/",
-        registrationData
+        registrationData,
+        { timeout: REGISTER_REQUEST_TIMEOUT_MS }
       );
 
       return response.data;
     },
 
     onSuccess: (_, variables) => {
-      toast.success("Account created! Check your email for the OTP.");
+      savePendingRegistrationEmail(variables.email);
+      toast.success("Check your email for a verification code, or request a new one.");
 
       navigate("/verify-email", {
         state: { email: variables.email },
       });
     },
 
-    onError: (error) => {
-      const data = error.response?.data;
+    onError: (error, variables) => {
+      const submittedEmail = variables?.email;
 
-      if (data && typeof data === "object") {
-        const messages = Object.entries(data)
-          .map(([field, value]) => {
-            const message = Array.isArray(value)
-              ? value.join(" ")
-              : value;
-
-            return `${field}: ${message}`;
-          })
-          .join("\n");
-
-        toast.error(messages || "Could not create your account.");
-      } else {
-        toast.error("Could not connect to the server. Please try again.");
+      if (!error.response || error.response.status >= 500) {
+        if (submittedEmail) {
+          savePendingRegistrationEmail(submittedEmail);
+          navigate("/verify-email", {
+            state: { email: submittedEmail, registrationOutcomeUnknown: true },
+          });
+        }
+        toast.info(
+          "We couldn't confirm the registration result. You can request a verification code here, or retry registration if no account was created."
+        );
+        return;
       }
+
+      if (error.response.status === 429) {
+        toast.error("Too many registration attempts. Please wait and try again.");
+        return;
+      }
+
+      if (error.response.data?.code === "account_already_active") {
+        clearPendingRegistrationEmail();
+        toast.error("An account with this email already exists. Please log in.");
+        return;
+      }
+
+      const data = error.response.data;
+      const message =
+        data?.detail ||
+        data?.email?.[0] ||
+        data?.password?.[0] ||
+        "Could not create your account. Check your details and try again.";
+      toast.error(message);
     },
   });
 
@@ -100,6 +124,7 @@ const Register = () => {
       return;
     }
 
+    savePendingRegistrationEmail(cleanEmail);
     mutation.mutate({
       first_name: cleanFirstName,
       last_name: cleanLastName,

@@ -1,12 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { ArrowLeft, LayoutDashboard, Package, ShoppingBag, Users } from 'lucide-react';
 
 const AdminSidebar = () => {
   const links = [
-    { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
-    { name: 'Inventory', path: '/admin/inventory', icon: Package },
-    { name: 'Orders', path: '/admin/orders', icon: ShoppingBag },
-    { name: 'Users', path: '/admin/users', icon: Users },
+    { name: 'Dashboard', path: '/admin', icon: '⌬' },
+    { name: 'Inventory', path: '/admin/inventory', icon: '⧉' },
+    { name: 'orders', path: '/admin/orders', icon: '▨' }, // New Sector
+    { name: 'Users', path: '/admin/users', icon: '⚇' },  // New Sector
   ];
 
   return (
@@ -33,12 +32,12 @@ const AdminSidebar = () => {
             end={link.path === '/admin'}
             className={({ isActive }) => `
               flex shrink-0 items-center gap-1 md:gap-4 px-2 sm:px-2.5 md:px-5 py-2.5 md:py-3 rounded-xl transition-all font-mono text-[8px] sm:text-[9px] md:text-[10px] uppercase tracking-wider md:tracking-[0.3em]
-              ${isActive 
-                ? 'bg-white text-black font-bold shadow-[0_0_20px_rgba(255,255,255,0.1)]' 
+              ${isActive
+                ? 'bg-white text-black font-bold shadow-[0_0_20px_rgba(255,255,255,0.1)]'
                 : 'text-gray-500 hover:text-white hover:bg-white/5'}
             `}
           >
-            <link.icon size={16} aria-hidden="true" />
+            <span className="text-[14px] leading-none">{link.icon}</span>
             {link.name}
           </NavLink>
         ))}
@@ -46,11 +45,11 @@ const AdminSidebar = () => {
 
       {/* Shutdown Protocol */}
       <div className="shrink-0 md:mt-auto md:pt-8 md:border-t border-white/5 pl-1">
-        <NavLink 
-          to="/" 
+        <NavLink
+          to="/"
           className="group flex items-center gap-1 md:gap-2 text-white/50 md:text-white/20 hover:text-green-500 font-mono text-[7px] sm:text-[8px] md:text-[9px] tracking-wide md:tracking-widest uppercase transition-colors whitespace-nowrap"
         >
-          <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+          <span className="group-hover:-translate-x-1 transition-transform">←</span>
           Exit_Console
         </NavLink>
       </div>

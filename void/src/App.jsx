@@ -39,6 +39,7 @@ import { AppStartupProvider } from "./components/common/AppStartupContext";
 
 import { logout, restoreSession } from "./store/authSlice";
 import { clearAccessToken } from "./api/apiClient";
+import { isBackendUnavailable } from "./api/errorClassification";
 import { fetchCurrentCart } from "./store/cartSlice";
 
 import { ToastContainer, toast } from "react-toastify";
@@ -51,20 +52,18 @@ const MAX_INITIAL_LOADER_MS = 5000;
 const LOADER_FADE_MS = 500;
 let bootstrapPromise;
 
-const isBackendUnavailable = (action) => {
-  if (action.meta?.requestStatus !== "rejected") return false;
-  const status = action.payload?.status;
-  return status == null || [502, 503, 504].includes(status);
-};
+const wasBackendUnavailable = (action) =>
+  action.meta?.requestStatus === "rejected" &&
+  isBackendUnavailable(action.payload);
 
 const initializeApp = (dispatch) => {
   if (!bootstrapPromise) {
     bootstrapPromise = (async () => {
       const sessionResult = await dispatch(restoreSession());
-      if (isBackendUnavailable(sessionResult)) return false;
+      if (wasBackendUnavailable(sessionResult)) return false;
 
       const cartResult = await dispatch(fetchCurrentCart());
-      return !isBackendUnavailable(cartResult);
+      return !wasBackendUnavailable(cartResult);
     })()
       .catch(() => false)
       .finally(() => {

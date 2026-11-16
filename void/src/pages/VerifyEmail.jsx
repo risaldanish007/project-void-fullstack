@@ -1,17 +1,38 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { accountsClient } from "../api/apiClient";
+import {
+  clearPendingRegistrationEmail,
+  getPendingRegistrationEmail,
+  savePendingRegistrationEmail,
+} from "../utils/pendingRegistration";
 
 const VerifyEmail = () => {
   const [otp, setOtp] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const location = useLocation();
   const navigate = useNavigate();
 
-  const email = location.state?.email;
+  const [email, setEmail] = useState(
+    () => location.state?.email || getPendingRegistrationEmail()
+  );
+  const [isEmailEditable, setIsEmailEditable] = useState(
+    () => !location.state?.email && !getPendingRegistrationEmail()
+  );
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return undefined;
+
+    const timer = window.setTimeout(
+      () => setResendCooldown((seconds) => Math.max(0, seconds - 1)),
+      1000
+    );
+    return () => window.clearTimeout(timer);
+  }, [resendCooldown]);
 
   const mutation = useMutation({
     mutationFn: async (verificationData) => {
@@ -25,16 +46,44 @@ const VerifyEmail = () => {
 
     onSuccess: (data) => {
       toast.success(data.detail || "Email verified successfully!");
+      clearPendingRegistrationEmail();
 
       navigate("/login", { replace: true });
     },
 
     onError: (error) => {
-      const message =
-        error.response?.data?.detail ||
-        "Verification failed. Please try again.";
+      const responseMessage = error.response?.data?.detail;
+      const message = !error.response
+        ? "Connection failed. Check your internet and try again."
+        : responseMessage === "OTP has expired."
+          ? "That code has expired. Request a new verification code below."
+          : responseMessage || "Verification failed. Please try again.";
 
       toast.error(message);
+    },
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: async (emailAddress) => {
+      const response = await accountsClient.post("/resend-otp/", {
+        email: emailAddress,
+      });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      setResendCooldown(60);
+      toast.success(data.detail || "If the account can be verified, a new code is on its way.");
+    },
+    onError: (error) => {
+      if (error.response?.status === 429) {
+        const retryAfter = Number(error.response.headers?.["retry-after"]);
+        setResendCooldown(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 60);
+        toast.error("Please wait before requesting another verification code.");
+      } else if (!error.response) {
+        toast.error("Connection failed. Restore your internet connection and retry.");
+      } else {
+        toast.error("We couldn't send a code right now. Please try again shortly.");
+      }
     },
   });
 
@@ -42,7 +91,7 @@ const VerifyEmail = () => {
     event.preventDefault();
 
     if (!email) {
-      toast.error("Email address is missing. Please register again.");
+      toast.error("Enter your email address to continue verification.");
       return;
     }
 
@@ -56,25 +105,6 @@ const VerifyEmail = () => {
       otp,
     });
   };
-
-  if (!email) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white gap-4">
-        <h2 className="text-xl font-semibold">Verification unavailable</h2>
-
-        <p className="text-white/50 text-sm">
-          Please register again to start email verification.
-        </p>
-
-        <Link
-          to="/register"
-          className="text-white underline underline-offset-4"
-        >
-          Back to Register
-        </Link>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black relative overflow-hidden">
@@ -92,12 +122,35 @@ const VerifyEmail = () => {
           </h2>
 
           <p className="text-white/40 text-xs mt-3 leading-relaxed">
-            We've sent a verification code to
+            Enter your email and the verification code we sent.
           </p>
 
-          <p className="text-white text-sm mt-1 break-all">
-            {email}
-          </p>
+          {!isEmailEditable && email ? (
+            <>
+              <p className="text-white text-sm mt-1 break-all">{email}</p>
+              <button
+                type="button"
+                onClick={() => setIsEmailEditable(true)}
+                className="mt-1 text-white/50 hover:text-white text-xs underline underline-offset-4"
+              >
+                Change email
+              </button>
+            </>
+          ) : (
+            <input
+              type="email"
+              autoComplete="email"
+              placeholder="Email address"
+              value={email}
+              onChange={(event) => {
+                const value = event.target.value.trim().toLowerCase();
+                setEmail(value);
+                savePendingRegistrationEmail(value);
+              }}
+              className="mt-3 w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 outline-none focus:border-white/30 transition"
+              required
+            />
+          )}
         </div>
 
         <input
@@ -116,10 +169,32 @@ const VerifyEmail = () => {
 
         <button
           type="submit"
-          disabled={mutation.isPending || otp.length !== 6}
+          disabled={mutation.isPending || !email || otp.length !== 6}
           className="bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-lg border border-white/10 transition active:scale-[0.98]"
         >
           {mutation.isPending ? "Verifying..." : "Verify Email"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            const cleanEmail = email.trim().toLowerCase();
+            if (!cleanEmail) {
+              toast.error("Enter your email address first.");
+              return;
+            }
+            setEmail(cleanEmail);
+            savePendingRegistrationEmail(cleanEmail);
+            resendMutation.mutate(cleanEmail);
+          }}
+          disabled={resendMutation.isPending || resendCooldown > 0}
+          className="text-white/70 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed text-sm py-2 transition"
+        >
+          {resendMutation.isPending
+            ? "Sending code..."
+            : resendCooldown > 0
+              ? `Resend available in ${resendCooldown}s`
+              : "Resend verification code"}
         </button>
 
         <p className="text-center text-white/40 text-[10px] uppercase tracking-widest font-mono">
@@ -129,6 +204,16 @@ const VerifyEmail = () => {
             className="text-white hover:text-green-500 underline underline-offset-4"
           >
             Log in
+          </Link>
+        </p>
+
+        <p className="text-center text-white/40 text-xs">
+          Need to retry registration?{" "}
+          <Link
+            to="/register"
+            className="text-white/70 hover:text-white underline underline-offset-4"
+          >
+            Return to registration
           </Link>
         </p>
       </form>

@@ -4,7 +4,6 @@ import { ordersClient } from "../../api/apiClient";
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip, BarChart, Bar } from 'recharts';
 import VoidLoader from "../../styles/VoidLoader";
 import ApiError from "../../components/common/ApiError";
-import AdminPageHeader from "../components/AdminPageHeader";
 
 const AdminDashboard = () => {
   const { data: stats, isLoading, isError, error, refetch } = useQuery({
@@ -39,14 +38,13 @@ const AdminDashboard = () => {
   }));
 
   return (
-    <div className="admin-page space-y-6 animate-in fade-in duration-700 pb-16">
-      <AdminPageHeader title="Dashboard" description="Revenue, customer activity, and recent payment performance." />
+    <div className="space-y-10 animate-in fade-in duration-1000 pb-20">
 
       {/* SECTION 1: REVENUE HUD */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Area Chart – Revenue Over Time */}
-        <div className="admin-card lg:col-span-2 p-6 sm:p-7 bg-[#0a0a0a] border border-white/10 relative overflow-hidden">
+        <div className="lg:col-span-2 p-8 bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
           <header className="mb-10 flex justify-between items-center">
             <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter">Transaction Performance</h3>
             <span className="text-[10px] font-mono text-white/70 uppercase tracking-widest font-black">[ Market_Data_INR ]</span>
@@ -88,7 +86,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Capital Revenue Indicators */}
-        <div className="admin-card p-6 sm:p-7 bg-[#0a0a0a] border border-white/10 flex flex-col justify-between relative overflow-hidden">
+        <div className="p-8 bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] flex flex-col justify-between shadow-2xl relative overflow-hidden">
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-green-500/5 blur-3xl rounded-full" />
           <div>
             <h4 className="text-3xl font-black uppercase italic tracking-tighter text-white">Financials</h4>
@@ -117,7 +115,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* SECTION 2: INDIVIDUAL PAYMENTS (BAR CHART) */}
-      <div className="admin-card p-6 sm:p-7 bg-[#0a0a0a] border border-white/10 relative overflow-hidden">
+      <div className="p-8 bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
         <header className="mb-10 flex justify-between items-center">
           <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter">Individual Payment Streams</h3>
           <span className="text-[10px] font-mono text-white/70 uppercase tracking-widest font-black">[ Recent_Transactions ]</span>
@@ -152,7 +150,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* SECTION 3: TOP SELLERS */}
-      <div className="admin-card p-6 sm:p-7 bg-[#0a0a0a] border border-white/10">
+      <div className="p-8 bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] shadow-xl">
         <header className="mb-8 flex items-center gap-6">
           <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter">Top Sellers</h3>
           <div className="flex-1 h-[1px] bg-white/10" />

@@ -60,6 +60,7 @@ export const restoreSession = createAsyncThunk(
       if (error.response?.status === 401) clearAccessToken();
       return rejectWithValue({
         status: error.response?.status ?? null,
+        code: error.code,
         message: error.message || "Could not restore the session",
       });
     }

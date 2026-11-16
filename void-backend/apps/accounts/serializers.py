@@ -5,6 +5,7 @@ from rest_framework import serializers
 User = get_user_model()
 
 class RegisterSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(max_length=254, validators=[])
     password = serializers.CharField(
         write_only = True,
         validators = [validate_password],
@@ -14,6 +15,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         model = User
         fields = ("id","email","first_name","last_name","password")
         read_only_fields = ("id",)
+
+    def validate_email(self, value):
+        return value.strip().casefold()
 
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
@@ -55,7 +59,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return full_name if full_name else obj.email.split("@")[0]
 
 class EmailVerificationSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = serializers.EmailField(max_length=254)
 
     otp = serializers.CharField(
         min_length=6,
@@ -71,3 +75,13 @@ class EmailVerificationSerializer(serializers.Serializer):
             )
 
         return value
+
+    def validate_email(self, value):
+        return value.strip().casefold()
+
+
+class ResendVerificationSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=254)
+
+    def validate_email(self, value):
+        return value.strip().casefold()

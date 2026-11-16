@@ -1,4 +1,5 @@
 import axios from "axios";
+import { isBackendUnavailable } from "./errorClassification";
 
 const API_TIMEOUT_MS = 10000;
 
@@ -42,13 +43,10 @@ let csrfToken = null;
 let refreshPromise = null;
 
 const reportUnavailableService = (error) => {
-  if (error.code === "ERR_CANCELED" || error.name === "CanceledError") return;
-
-  const status = error.response?.status;
-  if (!error.response || [502, 503, 504].includes(status)) {
+  if (isBackendUnavailable(error)) {
     window.dispatchEvent(
       new CustomEvent("void:backend-unavailable", {
-        detail: { status: status ?? null, occurredAt: Date.now() },
+        detail: { status: null, occurredAt: Date.now() },
       })
     );
   }
@@ -144,6 +142,8 @@ const addRequestHeaders = (client) => {
       const isAuthEndpoint = [
         "/login/",
         "/register/",
+        "/verify-email/",
+        "/resend-otp/",
         "/csrf/",
         "/logout/",
         "/token/refresh/",

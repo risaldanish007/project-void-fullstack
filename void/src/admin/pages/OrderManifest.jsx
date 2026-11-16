@@ -4,7 +4,6 @@ import { ordersClient } from "../../api/apiClient";
 import { toast } from 'react-toastify';
 import VoidLoader from "../../styles/VoidLoader";
 import ApiError from "../../components/common/ApiError";
-import AdminPageHeader from "../components/AdminPageHeader";
 
 // Map DRF order status values to the UI's display labels and select values.
 // DRF Status choices: pending_payment, placed, processing, shipped, delivered, cancelled
@@ -115,12 +114,12 @@ const OrderManifest = () => {
   }
 
   return (
-    <div className="admin-page animate-in fade-in duration-700 relative pb-16 font-sans">
+    <div className="animate-in fade-in duration-700 relative pb-20 font-sans">
 
       {/* --- ORDER DETAIL MANIFEST --- */}
       {selectedOrder && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/95 backdrop-blur-xl p-6">
-          <div className="admin-modal-panel bg-[#0f0f0f] border border-white/10 w-full max-w-3xl rounded-2xl p-5 sm:p-8 shadow-2xl relative">
+          <div className="bg-[#0f0f0f] border border-white/10 w-full max-w-3xl rounded-[2rem] p-10 shadow-2xl relative">
             <div className="flex justify-between items-start mb-10 border-b border-white/5 pb-6">
               <div>
                 <span className="text-cyan-400 font-bold text-[10px] tracking-[0.3em] uppercase block mb-1">Detailed Order Manifest</span>
@@ -168,9 +167,14 @@ const OrderManifest = () => {
       )}
 
       {/* --- HEADER & FILTERS --- */}
-      <div className="mb-6 flex flex-col gap-5">
+      <header className="mb-10 flex flex-col gap-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <AdminPageHeader title="Orders" description={`${filteredOrders?.length ?? 0} orders match the current filters.`} />
+          <div>
+            <h2 className="text-3xl font-bold uppercase italic tracking-tighter text-white/80 leading-none">Order Administration</h2>
+            <p className="text-[11px] text-white/40 mt-3 uppercase tracking-widest font-bold">
+              Found {filteredOrders?.length} Total Records.
+            </p>
+          </div>
           <input
             type="text"
             placeholder="Search by ID or Customer Name..."
@@ -207,10 +211,10 @@ const OrderManifest = () => {
             ))}
           </div>
         </div>
-      </div>
+      </header>
 
       {/* --- ORDER TABLE --- */}
-      <div className="admin-table-scroll">
+      <div className="overflow-hidden border border-white/10 rounded-[2rem] bg-[#0f0f0f]/60 backdrop-blur-md shadow-2xl">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-white/10 text-[10px] text-white/40 uppercase tracking-[0.2em] bg-white/[0.02]">

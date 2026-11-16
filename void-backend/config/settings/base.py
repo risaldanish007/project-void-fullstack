@@ -154,8 +154,10 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 587
+
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
 
@@ -182,7 +184,9 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "catalog_read": "120/minute",
         "auth_login": "5/minute",
-        "auth_register": "5/hour",
+        "auth_register": "100/hour",
+        "auth_resend_email": "3/hour",
+        "auth_resend_ip": "20/hour",
         "order_checkout": "10/hour",
         "payment_verify": "30/hour",
         "auth_verify": "100/hour",
@@ -203,7 +207,8 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(
-        "CORS_ALLOWED_ORIGINS", "http://localhost:5173"
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
     ).split(",")
     if origin.strip()
 ]
@@ -213,7 +218,8 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(
-        "CSRF_TRUSTED_ORIGINS", "http://localhost:5173"
+        "CSRF_TRUSTED_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
     ).split(",")
     if origin.strip()
 ]

@@ -7,10 +7,11 @@ from apps.accounts.auth_views import (
     CsrfTokenView,
     VerifyEmailView,
 )
-from apps.accounts.views import RegisterView, UserProfileView
+from apps.accounts.views import RegisterView, ResendOTPView, UserProfileView
 
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
+    path("resend-otp/", ResendOTPView.as_view(), name="resend-otp"),
     path("csrf/", CsrfTokenView.as_view(), name="csrf"),
     path("login/", CookieTokenLoginView.as_view(), name="login"),
     path("token/refresh/", CookieTokenRefreshView.as_view(), name="token_refresh"),

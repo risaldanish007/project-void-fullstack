@@ -1,134 +1,219 @@
-import React, { useRef, useEffect, useState, Suspense } from "react";
+import React, {
+  Component,
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import {
-  useGLTF,
-  Environment,
-  AdaptiveDpr,
-  AdaptiveEvents,
-  useProgress,
-} from "@react-three/drei";
+import { useGLTF, Environment } from "@react-three/drei";
 import { motion as Motion } from "framer-motion";
 
-function CanModel({ shouldAnimate }) {
-  const { scene } = useGLTF("/3d/can5.glb");
+// ---------------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------------
+const MODEL_URL = "/3d/can5.glb";
+
+// Local environment map (served from /public, works offline).
+// For even more detailed reflections, swap in a 2k version, e.g.
+// "/3d/studio_small_03_2k.exr". 2k is the sweet spot; 4k is heavy to load.
+const ENV_URL = "/3d/studio_small_03_1k.exr";
+
+const VERTICAL_OFFSET = 0.6;
+const INTRO_START_OFFSET = -1.2;
+
+// ---------------------------------------------------------------------------
+// Error boundary: a failed asset never takes down the page
+// ---------------------------------------------------------------------------
+class AssetBoundary extends Component {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error) {
+    console.error("[CanViewer] asset failed to load:", error);
+    this.props.onError?.(error);
+  }
+
+  render() {
+    return this.state.hasError ? null : this.props.children;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Model
+// ---------------------------------------------------------------------------
+function CanModel({ shouldAnimate, onReady }) {
+  const { scene } = useGLTF(MODEL_URL);
+  const gl = useThree((state) => state.gl);
+
   const ref = useRef();
-  const { mouse } = useThree();
+  const introDone = useRef(!shouldAnimate);
 
-  const [introDone, setIntroDone] = useState(!shouldAnimate);
-
-  // Vertical positioning adjustment
-  const verticalOffset = 1;
-
-  // metallic look
+  // Metallic look + maximum texture sharpness
   useEffect(() => {
+    const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
+
+    const textureKeys = [
+      "map",
+      "normalMap",
+      "roughnessMap",
+      "metalnessMap",
+      "aoMap",
+      "emissiveMap",
+    ];
+
     scene.traverse((child) => {
-      if (child.isMesh) {
-        child.material.metalness = 0.8;
-        child.material.roughness = 0.3;
-        child.material.envMapIntensity = 2;
-      }
-    });
-  }, [scene]);
+      if (!child.isMesh) return;
 
-  // start below final position if animating
-  useEffect(() => {
+      const materials = Array.isArray(child.material)
+        ? child.material
+        : [child.material];
+
+      materials.forEach((material) => {
+        material.metalness = 0.8;
+        material.roughness = 0.3;
+        material.envMapIntensity = 2;
+
+        textureKeys.forEach((key) => {
+          if (material[key]) {
+            material[key].anisotropy = maxAnisotropy;
+            material[key].needsUpdate = true;
+          }
+        });
+
+        material.needsUpdate = true;
+      });
+    });
+  }, [scene, gl]);
+
+  // Set the starting position before the first paint
+  useLayoutEffect(() => {
     if (shouldAnimate && ref.current) {
-      ref.current.position.y = verticalOffset - 1.2;
+      ref.current.position.y = VERTICAL_OFFSET + INTRO_START_OFFSET;
     }
   }, [shouldAnimate]);
 
-  useFrame((state) => {
-    if (!ref.current) return;
+  // This component only mounts once the model AND environment have resolved
+  // (both live inside the same <Suspense>), so this is the "ready" signal.
+  useEffect(() => {
+    const id = requestAnimationFrame(() => onReady?.());
+    return () => cancelAnimationFrame(id);
+  }, [onReady]);
 
-    const t = state.clock.getElapsedTime();
+  useFrame((state, delta) => {
+    const object = ref.current;
+    if (!object) return;
 
-    // ENTRY ANIMATION
-    if (!introDone) {
-      ref.current.position.y +=
-        (verticalOffset - ref.current.position.y) * 0.05;
+    // ENTRY ANIMATION (frame-rate independent)
+    if (!introDone.current) {
+      object.position.y = THREE.MathUtils.damp(
+        object.position.y,
+        VERTICAL_OFFSET,
+        3,
+        delta
+      );
 
-      if (Math.abs(ref.current.position.y - verticalOffset) < 0.01) {
-        ref.current.position.y = verticalOffset;
-        setIntroDone(true);
+      if (Math.abs(object.position.y - VERTICAL_OFFSET) < 0.005) {
+        object.position.y = VERTICAL_OFFSET;
+        introDone.current = true;
       }
       return;
     }
 
     // IDLE FLOATING
-    ref.current.position.y =
-      verticalOffset + Math.sin(t * 1.2) * 0.03;
+    const t = state.clock.getElapsedTime();
+    object.position.y = VERTICAL_OFFSET + Math.sin(t * 1.2) * 0.03;
 
-    const baseRotation = Math.PI;
+    // POINTER PARALLAX (frame-rate independent smoothing)
+    const { pointer } = state;
+    const targetY = Math.PI + pointer.x * 0.2;
+    const targetX = -pointer.y * 0.2;
 
-    const targetY = baseRotation + mouse.x * 0.20;
-    const targetX = -mouse.y * 0.20;
-
-    ref.current.rotation.y +=
-      (targetY - ref.current.rotation.y) * 0.03;
-
-    ref.current.rotation.x +=
-      (targetX - ref.current.rotation.x) * 0.03;
+    object.rotation.y = THREE.MathUtils.damp(
+      object.rotation.y,
+      targetY,
+      2.5,
+      delta
+    );
+    object.rotation.x = THREE.MathUtils.damp(
+      object.rotation.x,
+      targetX,
+      2.5,
+      delta
+    );
   });
 
   return (
     <primitive
       ref={ref}
       object={scene}
-      scale={[5, 4.7, 5]}
+      scale={[3, 2.9, 3]}
       rotation={[0, Math.PI, 0]}
-      position={[0, 0, -1]}
+      position={[0, VERTICAL_OFFSET, -1]}
     />
   );
 }
 
+// ---------------------------------------------------------------------------
+// Viewer
+// ---------------------------------------------------------------------------
 export default function CanViewer() {
   const [ready, setReady] = useState(false);
 
+  // Read once. The write happens in an effect so React StrictMode's
+  // double-invoked initializer can't flip the flag before first render.
   const [shouldAnimate] = useState(() => {
-    const alreadyPlayed = sessionStorage.getItem("canAnimated");
-    if (!alreadyPlayed) {
-      sessionStorage.setItem("canAnimated", "true");
-      return true;
+    try {
+      return !sessionStorage.getItem("canAnimated");
+    } catch {
+      return false;
     }
-    return false;
   });
 
-  function ModelWithReady({ onReady }) {
-    const { progress } = useProgress();
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("canAnimated", "true");
+    } catch {
+      /* storage unavailable, ignore */
+    }
+  }, []);
 
-    useEffect(() => {
-      if (progress === 100) {
-        requestAnimationFrame(() => {
-          onReady();
-        });
-      }
-    }, [progress, onReady]);
-
-    return <CanModel shouldAnimate={shouldAnimate} />;
-  }
+  const markReady = () => setReady(true);
 
   return (
     <Motion.div
       initial={shouldAnimate ? { opacity: 0 } : false}
-      animate={ready ? { opacity: 1 } : { opacity: 0 }}
+      animate={{ opacity: ready ? 1 : 0 }}
       transition={{ duration: 1.2, ease: "easeOut" }}
       className="w-full"
     >
       <div className="absolute inset-0 h-screen w-screen pointer-events-none">
         <Canvas
-          camera={{ position: [0, 0, 7] }}
-          dpr={[1, 1.5]}
-          gl={{ antialias: false, powerPreference: "high-performance" }}
+          camera={{ position: [0, 0, 7], fov: 50 }}
+          dpr={[1, 2]}
+          gl={{
+            antialias: true,
+            powerPreference: "high-performance",
+            toneMapping: THREE.ACESFilmicToneMapping,
+            toneMappingExposure: 1,
+          }}
         >
-          <AdaptiveDpr pixelated />
-          <AdaptiveEvents />
-
-          <ambientLight intensity={0} />
-          <Environment preset="studio" resolution={-1} />
-          <directionalLight position={[5, 5, -9]} intensity={-1} />
-
+          {/* Lighting comes entirely from the environment map */}
           <Suspense fallback={null}>
-            <ModelWithReady onReady={() => setReady(true)} />
+            {/* If the HDR fails, the can still renders (just less reflective) */}
+            <AssetBoundary>
+              <Environment files={ENV_URL} />
+            </AssetBoundary>
+
+            {/* If the model fails, still fade the canvas in instead of hanging */}
+            <AssetBoundary onError={markReady}>
+              <CanModel shouldAnimate={shouldAnimate} onReady={markReady} />
+            </AssetBoundary>
           </Suspense>
         </Canvas>
       </div>
@@ -136,4 +221,4 @@ export default function CanViewer() {
   );
 }
 
-useGLTF.preload("/3d/can5.glb");
+useGLTF.preload(MODEL_URL);

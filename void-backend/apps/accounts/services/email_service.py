@@ -3,8 +3,10 @@ from django.core.mail import send_mail
 from .otp_service import create_otp
 
 
-def send_verification_email(user):
-    otp = create_otp(user)
+def send_verification_email(user, only_if_unverified=False):
+    otp = create_otp(user, only_if_unverified=only_if_unverified)
+    if otp is None:
+        return False
 
     send_mail(
         subject="Verify your VOID account",
@@ -18,3 +20,4 @@ def send_verification_email(user):
         recipient_list=[user.email],
         fail_silently=False,
     )
+    return True
