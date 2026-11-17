@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.permissions import IsAdminUserOrStaff
 from apps.orders.models import Order
+from apps.orders.payment_service import InvalidOrderTransition, transition_order_status
 from .serializers import AdminOrderReadSerializer
 
 logger = logging.getLogger(__name__)
@@ -82,16 +83,18 @@ class AdminOrderDetailView(APIView):
         return Response(AdminOrderReadSerializer(order, context={"request": request}).data)
 
     def patch(self, request, public_id):
-        order = self._get_order(public_id)
-        if order is None:
+        order_id = Order.objects.filter(public_id=public_id).values_list("pk", flat=True).first()
+        if order_id is None:
             return Response({"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = AdminOrderStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         new_status = serializer.validated_data["status"]
-        order.status = new_status
-        order.save(update_fields=["status", "updated_at"])
+        try:
+            order = transition_order_status(order_id, new_status)
+        except InvalidOrderTransition as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
 
         logger.info(
             "Admin %s updated order %s status to %s",

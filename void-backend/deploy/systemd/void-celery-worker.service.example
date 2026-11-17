@@ -1,0 +1,18 @@
+[Unit]
+Description=VOID Celery worker
+After=network.target
+
+[Service]
+User=void
+Group=void
+WorkingDirectory=/srv/void/void-backend
+EnvironmentFile=/etc/void/void.env
+Environment=DJANGO_SETTINGS_MODULE=config.settings.production
+ExecStart=/srv/void/venv/bin/celery -A config worker --loglevel=INFO --concurrency=2
+Restart=on-failure
+RestartSec=5
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

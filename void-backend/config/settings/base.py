@@ -16,6 +16,7 @@ import sys
 from datetime import timedelta
 from dotenv import load_dotenv
 from celery.schedules import crontab
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -26,7 +27,9 @@ load_dotenv(BASE_DIR / ".env")
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-SECRET_KEY = os.environ["SECRET_KEY"]
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise ImproperlyConfigured("SECRET_KEY must be set in the environment.")
 
 DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 
@@ -92,7 +95,8 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-if "test" in sys.argv:
+USE_POSTGRES_TEST_DB = os.environ.get("VOID_TEST_USE_POSTGRES", "false").lower() == "true"
+if "test" in sys.argv and not USE_POSTGRES_TEST_DB:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -151,6 +155,8 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", MEDIA_ROOT))
+STATIC_ROOT = Path(os.environ.get("STATIC_ROOT", STATIC_ROOT))
 if "test" in sys.argv:
     import tempfile
     MEDIA_ROOT = Path(tempfile.mkdtemp(prefix="void-test-media-"))
@@ -175,6 +181,7 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
 RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "")
 
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -218,6 +225,12 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+COOKIE_SAMESITE = os.environ.get("COOKIE_SAMESITE", "Lax").strip().capitalize()
+COOKIE_DOMAIN = os.environ.get("COOKIE_DOMAIN") or None
+SESSION_COOKIE_SAMESITE = COOKIE_SAMESITE
+CSRF_COOKIE_SAMESITE = COOKIE_SAMESITE
+SESSION_COOKIE_DOMAIN = COOKIE_DOMAIN
+CSRF_COOKIE_DOMAIN = COOKIE_DOMAIN
 
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
@@ -238,10 +251,18 @@ CELERY_TASK_IGNORE_RESULT = True
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TASK_TIME_LIMIT = 300
 CELERY_TASK_SOFT_TIME_LIMIT = 240
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
 
 CELERY_BEAT_SCHEDULE = {
     "release-expired-pending-orders": {
         "task": "orders.cleanup_pending_orders",
+        "schedule": crontab(minute="*/5"),
+        "options": {"expires": 240},
+    },
+    "retry-pending-payment-refunds": {
+        "task": "orders.retry_pending_refunds",
         "schedule": crontab(minute="*/5"),
         "options": {"expires": 240},
     },

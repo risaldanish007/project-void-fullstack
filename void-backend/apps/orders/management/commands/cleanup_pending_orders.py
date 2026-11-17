@@ -7,8 +7,8 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
-from apps.catalog.models import Product
 from apps.orders.models import Order
+from apps.orders.payment_service import release_reserved_inventory_locked
 
 
 logger = logging.getLogger(__name__)
@@ -59,22 +59,23 @@ class Command(BaseCommand):
         skipped_count = 0
 
         for candidate in candidates.iterator():
-            if not candidate.razorpay_order_id:
-                skipped_count += 1
-                continue
-
             # Keep stock reserved if Razorpay reports any attempt that is not
-            # definitively failed, or if the Razorpay status check errors.
-            try:
-                result = client.order.payments(candidate.razorpay_order_id)
-                payments = result.get("items", [])
-            except Exception:
-                logger.exception(
-                    "Could not check Razorpay payments for order %s",
-                    candidate.public_id,
-                )
-                skipped_count += 1
-                continue
+            # definitively failed, or if the Razorpay status check errors. A
+            # stale reservation without a gateway order is also safe to release:
+            # no checkout response could have provided a payable order ID.
+            if candidate.razorpay_order_id:
+                try:
+                    result = client.order.payments(candidate.razorpay_order_id)
+                    payments = result.get("items", [])
+                except Exception:
+                    logger.exception(
+                        "Could not check Razorpay payments for order %s",
+                        candidate.public_id,
+                    )
+                    skipped_count += 1
+                    continue
+            else:
+                payments = []
 
             if any(payment.get("status") != "failed" for payment in payments):
                 skipped_count += 1
@@ -106,28 +107,8 @@ class Command(BaseCommand):
                     skipped_count += 1
                     continue
 
-                order_items = list(order.items.all())
-                product_ids = {
-                    item.product_id
-                    for item in order_items
-                    if item.product_id is not None
-                }
-
-                products = {
-                    product.pk: product
-                    for product in Product.objects.select_for_update()
-                    .filter(pk__in=product_ids)
-                    .order_by("pk")
-                }
-
-                for item in order_items:
-                    product = products.get(item.product_id)
-                    if product is not None:
-                        product.stock += item.quantity
-                        product.save(update_fields=["stock"])
-
+                release_reserved_inventory_locked(order)
                 order.status = Order.Status.CANCELLED
-                order.inventory_deducted = False
                 order.save(update_fields=[
                     "status",
                     "inventory_deducted",

@@ -21,6 +21,7 @@ class Order(models.Model):
         PENDING = "pending", "Pending"
         PAID = "paid", "Paid"
         FAILED = "failed", "Failed"
+        REFUND_PENDING = "refund_pending", "Refund pending"
         REFUNDED = "refunded", "Refunded"
 
     public_id = models.UUIDField(
@@ -85,12 +86,36 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     inventory_deducted = models.BooleanField(default=False)
-    
+
     class Meta:
         ordering = ["-created_at"]
 
     def __str__(self):
         return f"Order {self.public_id} — {self.user}"
+
+
+class RazorpayPaymentEvent(models.Model):
+    """Minimal payment idempotency ledger; never store raw gateway payloads."""
+
+    event_id = models.CharField(max_length=128, unique=True, null=True, blank=True)
+    payment_id = models.CharField(max_length=100, unique=True)
+    order = models.ForeignKey(
+        Order, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="payment_events",
+    )
+    refund_required = models.BooleanField(default=False)
+    refund_id = models.CharField(max_length=100, blank=True)
+    refund_processed = models.BooleanField(default=False)
+    refund_attempted_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class RazorpayWebhookReceipt(models.Model):
+    event_id = models.CharField(max_length=128, unique=True)
+    event_type = models.CharField(max_length=80)
+    payment_id = models.CharField(max_length=100, blank=True)
+    received_at = models.DateTimeField(auto_now_add=True)
 
 
 class OrderItem(models.Model):
@@ -126,4 +151,3 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity} × {self.product_name}"
-    

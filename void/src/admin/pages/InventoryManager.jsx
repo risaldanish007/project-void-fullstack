@@ -80,10 +80,15 @@ const InventoryManager = () => {
         flavor: data.flavor || "",
         is_active: data.is_active !== false,
         ingredients: (data.ingredients || []).filter(i => i.name?.trim()),
-        image: data.image || undefined,
-        image_bg: data.imageBg || data.image_bg || undefined,
-      };
 
+        ...(data.image?.startsWith("data:image/")
+          ? { image: data.image }
+          : {}),
+
+        ...((data.imageBg || data.image_bg)?.startsWith("data:image/")
+          ? { image_bg: data.imageBg || data.image_bg }
+          : {}),
+      };
       return selectedProduct
         ? catalogClient.patch(`/products/${selectedProduct.id}/`, payload)
         : catalogClient.post("/products/", payload);

@@ -47,8 +47,9 @@ def set_refresh_cookie(response, token):
         max_age=int(lifetime.total_seconds()),
         httponly=True,
         secure=not settings.DEBUG,
-        samesite="Lax",
+        samesite=settings.COOKIE_SAMESITE,
         path=REFRESH_COOKIE_PATH,
+        domain=settings.COOKIE_DOMAIN,
     )
 
 
@@ -56,7 +57,8 @@ def clear_refresh_cookie(response):
     response.delete_cookie(
         key=REFRESH_COOKIE_NAME,
         path=REFRESH_COOKIE_PATH,
-        samesite="Lax",
+        samesite=settings.COOKIE_SAMESITE,
+        domain=settings.COOKIE_DOMAIN,
     )
 
 class CsrfTokenView(APIView):

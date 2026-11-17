@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework.response import Response
+from django.conf import settings
 
 from .models import Cart,CartItem
 from ..catalog.models import Product
@@ -43,14 +44,15 @@ class CurrentCartView(APIView):
         if guest_token is None:
             return response
 
-        host = request.get_host().split(":")[0]
         response.set_cookie(
             key="guest_cart",
             value=guest_token,
             httponly=True,
-            secure= host not in ("127.0.0.1", "localhost"),
-            samesite ="Lax",
-            max_age=60 * 60 * 24 * 30
+            secure=not settings.DEBUG,
+            samesite=settings.COOKIE_SAMESITE,
+            max_age=60 * 60 * 24 * 30,
+            path="/",
+            domain=settings.COOKIE_DOMAIN,
         )
         return response
 
@@ -80,24 +82,21 @@ class CurrentCartView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        cart, guest_token = self.get_or_create_current_cart(request)
+        cart = Cart.objects.select_for_update().get(pk=cart.pk)
+        item = CartItem.objects.select_for_update().filter(
+            cart=cart, product_id=product_id,
+        ).first()
         product = get_object_or_404(
             Product.objects.select_for_update(),
             pk=product_id,
-            is_active = True,
+            is_active=True,
         )
 
-        cart, guest_token = self.get_or_create_current_cart(request)
-
-        item, created = CartItem.objects.get_or_create(
-            cart = cart,
-            product = product,
-            defaults={"quantity":quantity},
-        )
-
-        if not created:
-            item.quantity += quantity
-
-        if item.quantity > product.stock:
+        created = item is None
+        current_quantity = item.quantity if item else 0
+        new_quantity = current_quantity + quantity
+        if new_quantity > product.stock:
             return Response(
                 {
                     "stock": (
@@ -108,7 +107,10 @@ class CurrentCartView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if not created:
+        if created:
+            CartItem.objects.create(cart=cart, product=product, quantity=new_quantity)
+        else:
+            item.quantity = new_quantity
             item.save(update_fields=["quantity"])
 
         cart.save(update_fields=["updated_at"])
@@ -141,32 +143,44 @@ class MergeGuestCartView(APIView):
         except ValueError:
             guest_token = None
 
-        guest_cart = (
-            Cart.objects.select_for_update().filter(guest_token=guest_token).first()
-            if guest_token
-            else None
+        guest_cart_ref = (
+            Cart.objects.filter(guest_token=guest_token).values_list("pk", flat=True).first()
+            if guest_token else None
         )
+        cart_ids = sorted({user_cart.pk, *([guest_cart_ref] if guest_cart_ref else [])})
+        locked_carts = list(
+            Cart.objects.select_for_update().filter(pk__in=cart_ids).order_by("pk")
+        )
+        carts_by_id = {cart.pk: cart for cart in locked_carts}
+        user_cart = carts_by_id[user_cart.pk]
+        guest_cart = carts_by_id.get(guest_cart_ref)
 
         if guest_cart:
-            guest_items = list(
+            locked_items = list(
                 CartItem.objects.select_for_update()
-                .filter(cart=guest_cart)
-                .select_related("product")
+                .filter(cart_id__in=cart_ids)
+                .order_by("pk")
             )
-
-            products_by_id = Product.objects.select_for_update().in_bulk(
-            [item.product_id for item in guest_items]
-            )
+            guest_items = [item for item in locked_items if item.cart_id == guest_cart.pk]
+            user_items_by_product = {
+                item.product_id: item
+                for item in locked_items
+                if item.cart_id == user_cart.pk
+            }
+            product_ids = sorted({item.product_id for item in guest_items})
+            products_by_id = {
+                product.pk: product
+                for product in Product.objects.select_for_update()
+                .filter(pk__in=product_ids)
+                .order_by("pk")
+            }
 
             for guest_item in guest_items:
                 product = products_by_id.get(guest_item.product_id)
                 if not product or not product.is_active or product.stock < 1:
                     continue
 
-                user_item = CartItem.objects.filter(
-                    cart=user_cart,
-                    product=product
-                ).first()
+                user_item = user_items_by_product.get(product.pk)
 
                 current_quantity = user_item.quantity if user_item else 0
                 merged_quantity = min(
@@ -178,27 +192,33 @@ class MergeGuestCartView(APIView):
                     user_item.quantity = merged_quantity
                     user_item.save(update_fields=["quantity"])
                 elif merged_quantity:
-                    CartItem.objects.create(
+                    created_item = CartItem.objects.create(
                         cart=user_cart,
                         product=product,
                         quantity=merged_quantity,
                     )
+                    user_items_by_product[product.pk] = created_item
             guest_cart.delete()
         response = Response(
             CartSerializer(user_cart, context={"request": request}).data
         )
         if guest_cart:
-            response.delete_cookie("guest_cart",samesite="Lax")
+            response.delete_cookie(
+                "guest_cart", path="/", domain=settings.COOKIE_DOMAIN,
+                samesite=settings.COOKIE_SAMESITE,
+            )
         return response
 
 class CartItemDetailView(APIView):
     permission_classes = [AllowAny]
 
+    @transaction.atomic
     def delete(self, request, item_id):
         cart,guest_token = CurrentCartView().get_or_create_current_cart(request)
+        cart = Cart.objects.select_for_update().get(pk=cart.pk)
 
         item = get_object_or_404(
-            CartItem,
+            CartItem.objects.select_for_update(),
             pk=item_id,
             cart=cart
         )
@@ -215,12 +235,14 @@ class CartItemDetailView(APIView):
             request,
         )
 
+    @transaction.atomic
     def patch(self, request, item_id):
 
         cart, guest_token = CurrentCartView().get_or_create_current_cart(request)
+        cart = Cart.objects.select_for_update().get(pk=cart.pk)
 
         item = get_object_or_404(
-            CartItem,
+            CartItem.objects.select_for_update(),
             pk=item_id,
             cart=cart
         )
@@ -239,9 +261,10 @@ class CartItemDetailView(APIView):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-        if quantity > item.product.stock:
+        product = Product.objects.select_for_update().get(pk=item.product_id)
+        if quantity > product.stock:
             return Response(
-                {"stock": f"Only {item.product.stock} unit(s) are currently available."},
+                {"stock": f"Only {product.stock} unit(s) are currently available."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

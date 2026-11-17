@@ -440,9 +440,11 @@ class AdminOrderTests(BaseTestCase):
             format="json",
             **_auth_header(self.staff),
         )
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        # This legacy paid fixture has no Razorpay payment ID, so cancellation
+        # must fail closed instead of losing track of captured funds.
+        self.assertEqual(resp.status_code, status.HTTP_409_CONFLICT)
         self.order.refresh_from_db()
-        self.assertEqual(self.order.status, Order.Status.CANCELLED)
+        self.assertEqual(self.order.status, Order.Status.PLACED)
 
     def test_admin_patch_order_invalid_status(self):
         resp = self.client.patch(

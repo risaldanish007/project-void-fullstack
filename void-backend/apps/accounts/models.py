@@ -18,6 +18,10 @@ class UserManager(BaseUserManager):
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault("is_staff",True)
         extra_fields.setdefault("is_superuser",True)
+        # Superusers are provisioned by a trusted management command. Requiring
+        # an email OTP would otherwise lock the initial API administrator out.
+        extra_fields["is_active"] = True
+        extra_fields["is_email_verified"] = True
         if extra_fields["is_staff"] is not True:
             raise ValueError("A superuser must have is_staff=True.")
         if extra_fields["is_superuser"] is not True:

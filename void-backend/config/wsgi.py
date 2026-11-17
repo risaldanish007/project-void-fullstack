@@ -11,6 +11,10 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+if not os.environ.get('DJANGO_SETTINGS_MODULE'):
+    raise RuntimeError(
+        'Set DJANGO_SETTINGS_MODULE before starting WSGI; use '
+        'config.settings.production for deployment.'
+    )
 
 application = get_wsgi_application()
